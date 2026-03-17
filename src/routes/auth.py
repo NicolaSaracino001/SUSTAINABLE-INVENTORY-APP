@@ -1,8 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, logout_user, login_required
-from src.models.models import User
-from src.app import db # Importiamo db correttamente
+from src.models.models import db, User # Importiamo db dai modelli
 
 auth = Blueprint('auth', __name__)
 
@@ -12,8 +11,7 @@ def login():
         email = request.form.get('email')
         password = request.form.get('password')
         
-        # Cerchiamo l'utente
-        user = db.session.query(User).filter_by(email=email).first()
+        user = User.query.filter_by(email=email).first()
         
         if user and check_password_hash(user.password, password):
             login_user(user)
@@ -30,7 +28,7 @@ def register():
         restaurant_name = request.form.get('restaurant_name')
         password = request.form.get('password')
 
-        user = db.session.query(User).filter_by(email=email).first()
+        user = User.query.filter_by(email=email).first()
         if user:
             flash('Email già registrata.')
             return redirect(url_for('auth.register'))
