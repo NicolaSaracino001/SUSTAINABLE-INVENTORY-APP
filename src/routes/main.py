@@ -13,13 +13,34 @@ def dashboard():
 @main.route('/inventory')
 @login_required
 def inventory():
-    # In futuro qui passeremo i prodotti
-    return render_template('inventory.html')
+    # Recuperiamo i prodotti dell'utente loggato
+    products = Product.query.filter_by(user_id=current_user.id).all()
+    return render_template('inventory.html', products=products)
+
+@main.route('/add_inventory_item', methods=['POST'])
+@login_required
+def add_inventory_item():
+    name = request.form.get('name')
+    quantity = request.form.get('quantity')
+    unit = request.form.get('unit')
+    threshold = request.form.get('threshold')
+    
+    new_product = Product(
+        name=name,
+        quantity=float(quantity),
+        unit=unit,
+        min_threshold=float(threshold),
+        user_id=current_user.id
+    )
+    db.session.add(new_product)
+    db.session.commit()
+    
+    flash('Prodotto caricato in magazzino!')
+    return redirect(url_for('main.inventory'))
 
 @main.route('/menu')
 @login_required
 def menu():
-    # Recuperiamo tutti i piatti creati da questo specifico utente
     menu_items = MenuItem.query.filter_by(user_id=current_user.id).all()
     return render_template('menu.html', menu_items=menu_items)
 
@@ -33,5 +54,4 @@ def add_menu_item():
     db.session.add(new_item)
     db.session.commit()
     
-    flash('Piatto aggiunto al menù!')
     return redirect(url_for('main.menu'))

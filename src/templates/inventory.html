@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>S.I.M. - Magazzino</title>
+    <style>
+        body { font-family: sans-serif; margin: 0; display: flex; }
+        .sidebar { width: 250px; background: #2c3e50; color: white; height: 100vh; padding: 20px; }
+        .content { flex: 1; padding: 40px; background: #f4f7f6; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .btn { padding: 10px 15px; background: #2980b9; color: white; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; }
+        .low-stock { color: #e74c3c; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>S.I.M. 🍎</h2>
+        <nav>
+            <a href="{{ url_for('main.dashboard') }}" style="color:white; display:block; padding:10px 0; text-decoration:none;">Dashboard</a>
+            <a href="{{ url_for('main.inventory') }}" style="color:white; display:block; padding:10px 0; text-decoration:none;">Magazzino</a>
+            <a href="{{ url_for('main.menu') }}" style="color:white; display:block; padding:10px 0; text-decoration:none;">Gestione Menù</a>
+        </nav>
+    </div>
+    <div class="content">
+        <h1>Inventario Materie Prime</h1>
+        
+        <div class="card">
+            <h3>Aggiungi Prodotto a Deposito</h3>
+            <form action="{{ url_for('main.add_inventory_item') }}" method="POST">
+                <input type="text" name="name" placeholder="Nome (es. Farina 00)" required style="padding: 8px;">
+                <input type="number" step="0.1" name="quantity" placeholder="Quantità" required style="padding: 8px; width: 80px;">
+                <select name="unit" style="padding: 8px;">
+                    <option value="kg">kg</option>
+                    <option value="lt">litri</option>
+                    <option value="pz">pezzi</option>
+                </select>
+                <input type="number" step="0.1" name="threshold" placeholder="Soglia Minima" required style="padding: 8px; width: 100px;">
+                <button type="submit" class="btn">Carica</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h3>Giacenze Attuali</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Prodotto</th>
+                        <th>Giacenza</th>
+                        <th>Unità</th>
+                        <th>Soglia Minima</th>
+                        <th>Stato</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products %}
+                    <tr>
+                        <td>{{ product.name }}</td>
+                        <td class="{{ 'low-stock' if product.quantity <= product.min_threshold else '' }}">
+                            {{ product.quantity }}
+                        </td>
+                        <td>{{ product.unit }}</td>
+                        <td>{{ product.min_threshold }}</td>
+                        <td>
+                            {% if product.quantity <= product.min_threshold %}
+                                ⚠️ Riordinare
+                            {% else %}
+                                ✅ OK
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
