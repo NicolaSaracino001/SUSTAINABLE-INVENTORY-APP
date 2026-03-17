@@ -8,7 +8,12 @@ main = Blueprint('main', __name__)
 @main.route('/dashboard')
 @login_required
 def dashboard():
-    return render_template('dashboard.html', name=current_user.restaurant_name)
+    # Recuperiamo i prodotti sottosoglia per avvisare il ristoratore
+    low_stock_products = Product.query.filter(
+        Product.user_id == current_user.id,
+        Product.quantity <= Product.min_threshold
+    ).all()
+    return render_template('dashboard.html', name=current_user.restaurant_name, low_stock=low_stock_products)
 
 @main.route('/inventory')
 @login_required
@@ -44,7 +49,6 @@ def add_menu_item():
     db.session.commit()
     return redirect(url_for('main.menu'))
 
-# NUOVE ROTTE PER LE RICETTE
 @main.route('/recipe/<int:item_id>')
 @login_required
 def recipe(item_id):
@@ -58,8 +62,28 @@ def recipe(item_id):
 def add_recipe_item(item_id):
     product_id = request.form.get('product_id')
     quantity = float(request.form.get('quantity'))
-    
     new_recipe_item = RecipeItem(menu_item_id=item_id, product_id=product_id, quantity_needed=quantity)
     db.session.add(new_recipe_item)
     db.session.commit()
     return redirect(url_for('main.recipe', item_id=item_id))
+
+# LOGICA DI SCARICO AUTOMATICO
+@main.route('/sell_item/<int:item_id>', methods=['POST'])
+@login_required
+def sell_item(item_id):
+    # 1. Trova il piatto e la sua ricetta
+    recipe_items = RecipeItem.query.filter_by(menu_item_id=item_id).all()
+    
+    if not recipe_items:
+        flash("Errore: Questo piatto non ha ingredienti associati!")
+        return redirect(url_for('main.menu'))
+
+    # 2. Sottrai le quantità dal magazzino
+    for r_item in recipe_items:
+        product = Product.query.get(r_item.product_id)
+        if product:
+            product.quantity -= r_item.quantity_needed
+    
+    db.session.commit()
+    flash(f"Ordine registrato! Inventario aggiornato automaticamente.")
+    return redirect(url_for('main.menu'))
