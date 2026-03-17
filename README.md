@@ -8,4 +8,5 @@ Benvenuto in S.I.M., un'applicazione Flask per la gestione intelligente del maga
 
 ## 📝 Fasi Completate
 - [x] Fase 1: Creazione cartelle e inizializzazione Git.
-- [ ] Fase 2: Configurazione .env e requirements.txt.
+- [x] Fase 2: Configurazione .env e requirements.txt via VS Code.
+- [ ] Fase 3: Creazione del cuore dell'app (src/app.py).
