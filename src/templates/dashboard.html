@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <title>S.I.M. - Dashboard</title>
+    <style>
+        body { font-family: sans-serif; margin: 0; display: flex; }
+        .sidebar { width: 250px; background: #2c3e50; color: white; height: 100vh; padding: 20px; }
+        .content { flex: 1; padding: 40px; background: #f4f7f6; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-top: 20px; }
+        nav a { color: white; display: block; padding: 10px 0; text-decoration: none; border-bottom: 1px solid #34495e; }
+        nav a:hover { color: #27ae60; }
+        .btn-logout { color: #e74c3c; margin-top: 20px; display: block; text-decoration: none; }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>S.I.M. 🍎</h2>
+        <nav>
+            <a href="{{ url_for('main.dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('main.inventory') }}">Magazzino/Deposito</a>
+            <a href="{{ url_for('main.menu') }}">Gestione Menù</a>
+            <a href="#">Calendario Predittivo</a>
+        </nav>
+        <a href="{{ url_for('auth.logout') }}" class="btn-logout">Esci</a>
+    </div>
+    <div class="content">
+        <h1>Benvenuto, {{ name }}!</h1>
+        <div class="card">
+            <h3>Stato Rapido</h3>
+            <p>Qui vedrai gli ingredienti in esaurimento e le previsioni meteo per i prossimi giorni.</p>
+        </div>
+    </div>
+</body>
+</html>

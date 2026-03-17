@@ -5,7 +5,7 @@ import os
 import sys
 from dotenv import load_dotenv
 
-# Aggiunge la cartella principale al percorso di ricerca di Python
+# Aggiunge la cartella principale al percorso di ricerca
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 load_dotenv()
@@ -25,15 +25,18 @@ def create_app():
     login_manager.login_view = 'auth.login'
     login_manager.init_app(app)
 
-    # Importiamo i modelli usando il percorso corretto
     from src.models.models import User
     
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))
 
+    # REGISTRAZIONE BLUEPRINTS
     from src.routes.auth import auth as auth_blueprint
     app.register_blueprint(auth_blueprint)
+
+    from src.routes.main import main as main_blueprint
+    app.register_blueprint(main_blueprint)
 
     @app.route('/')
     def index():
