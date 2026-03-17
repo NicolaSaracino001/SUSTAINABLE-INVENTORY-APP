@@ -20,7 +20,9 @@ Benvenuto in S.I.M., un'applicazione Flask per la gestione intelligente del maga
 - [x] Fase 13: La Ricetta Interattiva (Associazione Piatto -> Ingredienti).
 - [x] Fase 14: Scarico Automatico - Logica di sottrazione automatica per ogni ordine.
 - [x] Bug Fix: Risolto `RuntimeError` in `auth.py` usando `db.session.query`.
-- [ ] Fase 15: Sistema di Alert Mail e Colori Scadenze.
+- [x] Bug Fix: Creato `run.py` per avvio professionale.
+- [x] Bug Fix: Risolto `UndefinedError` aggiungendo la relazione tra `Product` e `RecipeItem`.
+- [ ] Fase 15: Sistema di Alert e Visualizzazione Colori.
 
 
 
