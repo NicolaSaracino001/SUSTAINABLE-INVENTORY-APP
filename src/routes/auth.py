@@ -1,9 +1,8 @@
 from flask import Blueprint, render_template, redirect, url_for, request, flash
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import login_user, logout_user, login_required
-# Import Assoluti invece di quelli relativi
 from src.models.models import User
-from src.app import db
+from src.app import db # Importiamo db correttamente
 
 auth = Blueprint('auth', __name__)
 
@@ -13,11 +12,12 @@ def login():
         email = request.form.get('email')
         password = request.form.get('password')
         
-        user = User.query.filter_by(email=email).first()
+        # Cerchiamo l'utente
+        user = db.session.query(User).filter_by(email=email).first()
+        
         if user and check_password_hash(user.password, password):
             login_user(user)
-            # Per ora rimandiamo alla index finché non creiamo la dashboard
-            return redirect(url_for('index')) 
+            return redirect(url_for('main.dashboard'))
         else:
             flash('Email o password errate.')
             
@@ -30,7 +30,7 @@ def register():
         restaurant_name = request.form.get('restaurant_name')
         password = request.form.get('password')
 
-        user = User.query.filter_by(email=email).first()
+        user = db.session.query(User).filter_by(email=email).first()
         if user:
             flash('Email già registrata.')
             return redirect(url_for('auth.register'))

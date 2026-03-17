@@ -5,11 +5,11 @@ import os
 import sys
 from dotenv import load_dotenv
 
-# Aggiunge la cartella principale al percorso di ricerca
+# Carica configurazioni
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 load_dotenv()
 
+# Inizializziamo db QUI, fuori dalla funzione
 db = SQLAlchemy()
 
 def create_app():
@@ -19,6 +19,7 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
+    # Colleghiamo il db all'app
     db.init_app(app)
 
     login_manager = LoginManager()
@@ -29,13 +30,14 @@ def create_app():
     
     @login_manager.user_loader
     def load_user(user_id):
+        # Usiamo il contesto per sicurezza
         return User.query.get(int(user_id))
 
-    # REGISTRAZIONE BLUEPRINTS
+    # Import e registrazione dei Blueprints
     from src.routes.auth import auth as auth_blueprint
-    app.register_blueprint(auth_blueprint)
-
     from src.routes.main import main as main_blueprint
+    
+    app.register_blueprint(auth_blueprint)
     app.register_blueprint(main_blueprint)
 
     @app.route('/')
