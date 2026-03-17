@@ -2,52 +2,199 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>S.I.M. - Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S.I.M. - Dashboard Operativa</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: sans-serif; margin: 0; display: flex; }
-        .sidebar { width: 250px; background: #2c3e50; color: white; height: 100vh; padding: 20px; position: fixed; }
-        .content { flex: 1; padding: 40px; background: #f4f7f6; margin-left: 290px; }
-        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        nav a { color: white; display: block; padding: 10px 0; text-decoration: none; border-bottom: 1px solid #34495e; }
-        nav a:hover { color: #27ae60; }
-        .alert-box { background: #ffeaa7; border-left: 5px solid #fab1a0; padding: 15px; margin-bottom: 20px; border-radius: 4px; }
-        .status-red { color: #d63031; font-weight: bold; }
-        .btn-logout { color: #e17055; margin-top: 20px; display: block; text-decoration: none; font-weight: bold; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
-        .ai-card { border-left: 5px solid #0984e3; background: #ebf5ff; }
-        .chart-container { position: relative; height: 300px; width: 100%; }
+        /* VARIABILI DI COLORE PREMIUM */
+        :root {
+            --primary: #10b981; /* Verde smeraldo elegante */
+            --primary-dark: #059669;
+            --sidebar-bg: #0f172a; /* Blu scuro/Notte */
+            --bg-color: #f8fafc; /* Grigio chiarissimo per lo sfondo */
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --danger: #ef4444;
+            --danger-bg: #fef2f2;
+            --info: #3b82f6;
+            --info-bg: #eff6ff;
+        }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            margin: 0; 
+            display: flex; 
+            background-color: var(--bg-color);
+            color: var(--text-main);
+        }
+
+        /* SIDEBAR MODERNA */
+        .sidebar { 
+            width: 260px; 
+            background: var(--sidebar-bg); 
+            color: white; 
+            height: 100vh; 
+            padding: 30px 20px; 
+            position: fixed; 
+            box-sizing: border-box;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+        }
+        
+        .logo-container {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .logo-img {
+            max-width: 120px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            /* Se non trova l'immagine, mostra il testo sotto */
+        }
+
+        .logo-text {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary);
+            letter-spacing: 1px;
+        }
+
+        nav a { 
+            color: #cbd5e1; 
+            display: block; 
+            padding: 12px 15px; 
+            margin-bottom: 8px;
+            text-decoration: none; 
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        nav a:hover, nav a.active { 
+            background-color: rgba(255,255,255,0.1); 
+            color: white; 
+            padding-left: 20px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .btn-logout { 
+            color: #f87171; 
+            margin-top: 40px; 
+            display: block; 
+            text-decoration: none; 
+            font-weight: bold; 
+            padding: 12px 15px;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        .btn-logout:hover { background-color: rgba(248, 113, 113, 0.1); }
+
+        /* AREA CONTENUTO PRINCIPALE */
+        .content { 
+            flex: 1; 
+            padding: 40px 50px; 
+            margin-left: 260px; 
+        }
+
+        .header {
+            margin-bottom: 30px;
+        }
+        .header h1 { margin: 0; font-size: 28px; color: var(--sidebar-bg); }
+        .header p { margin: 5px 0 0 0; color: var(--text-muted); }
+
+        /* CARDS STILE GLASSMORPHISM/MODERNO */
+        .card { 
+            background: var(--card-bg); 
+            padding: 25px; 
+            border-radius: 16px; 
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03); 
+            margin-bottom: 25px; 
+            border: 1px solid #e2e8f0;
+        }
+        
+        .card h3 { margin-top: 0; color: var(--sidebar-bg); font-size: 18px; }
+
+        /* ALERT SCORTE */
+        .alert-box { 
+            background: var(--danger-bg); 
+            border-left: 5px solid var(--danger); 
+            padding: 20px; 
+            margin-bottom: 25px; 
+            border-radius: 12px; 
+            box-shadow: 0 2px 4px rgba(239, 68, 68, 0.1);
+        }
+        .alert-box h3 { margin-top: 0; color: var(--danger); }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { text-align: left; padding: 12px; color: var(--text-muted); font-weight: 600; border-bottom: 2px solid #e2e8f0; }
+        td { padding: 15px 12px; border-bottom: 1px solid #f1f5f9; color: var(--text-main); }
+        .status-red { color: var(--danger); font-weight: 700; }
+
+        /* AI CARD */
+        .ai-card { 
+            background: var(--info-bg);
+            border: none;
+            border-left: 5px solid var(--info); 
+        }
+        .ai-card h3 { color: var(--info); display: flex; align-items: center; gap: 10px;}
+        .ai-card p { font-size: 16px; color: #1e3a8a; font-weight: 500; margin-bottom: 0;}
+
+        .chart-container { position: relative; height: 350px; width: 100%; margin-top: 20px;}
     </style>
 </head>
 <body>
     <div class="sidebar">
-        <h2>S.I.M. 🍎</h2>
+        <div class="logo-container">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="" class="logo-img" onerror="this.style.display='none'">
+            <div class="logo-text">S.I.M. 🍎</div>
+        </div>
         <nav>
-            <a href="{{ url_for('main.dashboard') }}">Dashboard</a>
-            <a href="{{ url_for('main.inventory') }}">Magazzino</a>
-            <a href="{{ url_for('main.menu') }}">Gestione Menù</a>
+            <a href="{{ url_for('main.dashboard') }}" class="active">Dashboard</a>
+            <a href="{{ url_for('main.inventory') }}">📦 Magazzino</a>
+            <a href="{{ url_for('main.menu') }}">🍽️ Gestione Menù</a>
         </nav>
-        <a href="{{ url_for('auth.logout') }}" class="btn-logout">Esci</a>
+        <a href="{{ url_for('auth.logout') }}" class="btn-logout">🚪 Esci dall'account</a>
     </div>
 
     <div class="content">
-        <h1>Dashboard di {{ name }}</h1>
+        <div class="header">
+            <h1>Bentornato, {{ name }}!</h1>
+            <p>Ecco la panoramica in tempo reale del tuo ristorante.</p>
+        </div>
 
         {% if low_stock %}
         <div class="alert-box">
-            <h3>⚠️ Scorte in esaurimento</h3>
-            <p>Controlla il magazzino: alcuni prodotti sono sotto la soglia.</p>
+            <h3>⚠️ Azione Richiesta: Scorte in esaurimento</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ingrediente</th>
+                        <th>Giacenza Attuale</th>
+                        <th>Soglia di Sicurezza</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in low_stock %}
+                    <tr>
+                        <td style="font-weight: 600;">{{ p.name }}</td>
+                        <td class="status-red">{{ p.quantity }} {{ p.unit }}</td>
+                        <td style="color: var(--text-muted);">{{ p.min_threshold }} {{ p.unit }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
         {% endif %}
 
         <div class="card ai-card">
-            <h3>🤖 Assistente Predittivo (Meteo)</h3>
+            <h3>🤖 Assistente S.I.M. (Meteo & Predittività)</h3>
             <p>{{ weather_suggestion }}</p>
         </div>
 
         <div class="card">
-            <h3>Analisi Livelli Magazzino</h3>
+            <h3>📊 Analisi Livelli Magazzino</h3>
             <div class="chart-container">
                 <canvas id="inventoryChart"></canvas>
             </div>
@@ -57,6 +204,12 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const ctx = document.getElementById('inventoryChart').getContext('2d');
+            
+            // Colori premium per il grafico
+            const gradientBlue = ctx.createLinearGradient(0, 0, 0, 400);
+            gradientBlue.addColorStop(0, 'rgba(59, 130, 246, 0.8)');
+            gradientBlue.addColorStop(1, 'rgba(59, 130, 246, 0.2)');
+
             new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -65,14 +218,19 @@
                         {
                             label: 'Giacenza Attuale',
                             data: {{ chart_values|tojson }},
-                            backgroundColor: '#3498db'
+                            backgroundColor: gradientBlue,
+                            borderRadius: 6,
+                            borderWidth: 0
                         },
                         {
                             label: 'Soglia Minima',
                             data: {{ chart_thresholds|tojson }},
-                            backgroundColor: '#e74c3c',
+                            backgroundColor: '#ef4444',
                             type: 'line',
-                            borderColor: '#e74c3c',
+                            borderColor: '#ef4444',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            pointBackgroundColor: '#ef4444',
                             fill: false
                         }
                     ]
@@ -80,7 +238,13 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    scales: { y: { beginAtZero: true } }
+                    plugins: {
+                        legend: { position: 'top', labels: { font: { family: 'Inter', size: 13 } } }
+                    },
+                    scales: { 
+                        y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+                        x: { grid: { display: false } }
+                    }
                 }
             });
         });
