@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, redirect, url_for
 from flask_login import LoginManager
 import os
 from dotenv import load_dotenv
@@ -31,13 +31,13 @@ def create_app():
     app.register_blueprint(auth_blueprint)
     app.register_blueprint(main_blueprint)
 
-    # ---> LA MAGIA È QUI <---
     # Crea automaticamente tutte le tabelle nel database se non esistono
     with app.app_context():
         db.create_all()
 
     @app.route('/')
     def index():
-        return "<h1>S.I.M. Acceso!</h1><a href='/login'>Vai al Login</a>"
+        # Reindirizza direttamente e automaticamente alla pagina di Login!
+        return redirect(url_for('auth.login'))
 
     return app

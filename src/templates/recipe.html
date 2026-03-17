@@ -2,65 +2,124 @@
 <html lang="it">
 <head>
     <meta charset="UTF-8">
-    <title>S.I.M. - Gestione Ricetta</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S.I.M. - Composizione Ricetta</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: sans-serif; margin: 0; display: flex; }
-        .sidebar { width: 250px; background: #2c3e50; color: white; height: 100vh; padding: 20px; }
-        .content { flex: 1; padding: 40px; background: #f4f7f6; }
-        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
-        .btn { padding: 10px 15px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; }
+        :root {
+            --primary: #10b981;
+            --primary-dark: #059669;
+            --sidebar-bg: #0f172a;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+        }
+
+        body { font-family: 'Inter', sans-serif; margin: 0; display: flex; background-color: var(--bg-color); color: var(--text-main); }
+
+        /* SIDEBAR */
+        .sidebar { width: 260px; background: var(--sidebar-bg); color: white; height: 100vh; padding: 30px 20px; position: fixed; box-sizing: border-box; box-shadow: 4px 0 15px rgba(0,0,0,0.1); }
+        .logo-container { text-align: center; margin-bottom: 40px; }
+        .logo-img { max-width: 120px; border-radius: 12px; margin-bottom: 10px; }
+        .logo-text { font-size: 24px; font-weight: 700; color: var(--primary); letter-spacing: 1px; }
+        
+        nav a { color: #cbd5e1; display: block; padding: 12px 15px; margin-bottom: 8px; text-decoration: none; border-radius: 8px; font-weight: 600; transition: all 0.3s ease; }
+        nav a:hover, nav a.active { background-color: rgba(255,255,255,0.1); color: white; padding-left: 20px; border-left: 4px solid var(--primary); }
+        .btn-logout { color: #f87171; margin-top: 40px; display: block; text-decoration: none; font-weight: bold; padding: 12px 15px; border-radius: 8px; transition: all 0.3s; }
+        .btn-logout:hover { background-color: rgba(248, 113, 113, 0.1); }
+
+        /* CONTENT & CARDS */
+        .content { flex: 1; padding: 40px 50px; margin-left: 260px; }
+        .header { margin-bottom: 30px; display: flex; align-items: center; justify-content: space-between; }
+        .header h1 { margin: 0; font-size: 28px; color: var(--sidebar-bg); }
+        .header p { margin: 5px 0 0 0; color: var(--text-muted); }
+
+        .card { background: var(--card-bg); padding: 25px; border-radius: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 25px; border: 1px solid #e2e8f0; }
+        .card h3 { margin-top: 0; color: var(--sidebar-bg); font-size: 18px; margin-bottom: 20px; }
+
+        /* FORMS & INPUTS */
+        .form-row { display: flex; gap: 15px; margin-bottom: 15px; align-items: center; flex-wrap: wrap;}
+        select, input { flex: 1; padding: 12px 15px; border: 1px solid #cbd5e1; border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 14px; outline: none; transition: all 0.3s; min-width: 200px; }
+        select:focus, input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); }
+        
+        /* BOTTONI PREMIUM */
+        .btn { padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; color: white; transition: all 0.3s; text-decoration: none; display: inline-block; }
+        .btn-add { background-color: var(--primary); }
+        .btn-add:hover { background-color: var(--primary-dark); transform: translateY(-1px); }
+        .btn-back { background-color: #e2e8f0; color: var(--text-main); }
+        .btn-back:hover { background-color: #cbd5e1; }
+
+        /* TABLES */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { text-align: left; padding: 12px; color: var(--text-muted); font-weight: 600; border-bottom: 2px solid #e2e8f0; }
+        td { padding: 15px 12px; border-bottom: 1px solid #f1f5f9; color: var(--text-main); vertical-align: middle;}
+        
+        .badge { background: #f1f5f9; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
     </style>
 </head>
 <body>
     <div class="sidebar">
-        <h2>S.I.M. 🍎</h2>
+        <div class="logo-container">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="" class="logo-img" onerror="this.style.display='none'">
+            <div class="logo-text">S.I.M. 🍎</div>
+        </div>
         <nav>
-            <a href="{{ url_for('main.dashboard') }}" style="color:white; display:block; padding:10px 0; text-decoration:none;">Dashboard</a>
-            <a href="{{ url_for('main.inventory') }}" style="color:white; display:block; padding:10px 0; text-decoration:none;">Magazzino</a>
-            <a href="{{ url_for('main.menu') }}" style="color:white; display:block; padding:10px 0; text-decoration:none;">Gestione Menù</a>
+            <a href="{{ url_for('main.dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('main.inventory') }}">📦 Magazzino</a>
+            <a href="{{ url_for('main.menu') }}" class="active">🍽️ Gestione Menù</a>
         </nav>
+        <a href="{{ url_for('auth.logout') }}" class="btn-logout">🚪 Esci dall'account</a>
     </div>
+    
     <div class="content">
-        <h1>Ricetta per: {{ item.name }}</h1>
-        
+        <div class="header">
+            <div>
+                <h1>Distinta Base: {{ item.name }}</h1>
+                <p>Componi il piatto inserendo le dosi degli ingredienti.</p>
+            </div>
+            <a href="{{ url_for('main.menu') }}" class="btn btn-back">⬅ Torna al Menù</a>
+        </div>
+
         <div class="card">
-            <h3>Aggiungi Ingrediente alla Ricetta</h3>
-            <form action="{{ url_for('main.add_recipe_item', item_id=item.id) }}" method="POST">
-                <select name="product_id" required style="padding: 8px;">
-                    <option value="">Seleziona Ingrediente...</option>
+            <h3>➕ Aggiungi un Ingrediente</h3>
+            <form action="{{ url_for('main.add_recipe_item', item_id=item.id) }}" method="POST" class="form-row">
+                <select name="product_id" required>
+                    <option value="" disabled selected>Scegli dal Magazzino...</option>
                     {% for p in products %}
-                    <option value="{{ p.id }}">{{ p.name }} ({{ p.unit }})</option>
+                    <option value="{{ p.id }}">{{ p.name }} (in {{ p.unit }})</option>
                     {% endfor %}
                 </select>
-                <input type="number" step="0.001" name="quantity" placeholder="Dose (es. 0.2)" required style="padding: 8px; width: 100px;">
-                <button type="submit" class="btn">Aggiungi</button>
+                <input type="number" step="0.01" name="quantity" placeholder="Quantità necessaria" required>
+                <button type="submit" class="btn btn-add">Collega Ingrediente</button>
             </form>
         </div>
 
         <div class="card">
-            <h3>Ingredienti attuali nel piatto</h3>
+            <h3>📜 Ingredienti Collegati</h3>
             <table>
                 <thead>
                     <tr>
                         <th>Ingrediente</th>
-                        <th>Dose necessaria</th>
-                        <th>Unità</th>
+                        <th>Dose necessaria per 1 porzione</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for r in recipe_items %}
                     <tr>
-                        <td>{{ r.product.name }}</td>
-                        <td>{{ r.quantity_needed }}</td>
-                        <td>{{ r.product.unit }}</td>
+                        <td style="font-weight: 600;">{{ r.product.name }}</td>
+                        <td>{{ r.quantity_needed }} <span class="badge">{{ r.product.unit }}</span></td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="2" style="text-align: center; color: var(--text-muted); padding: 30px;">
+                            Nessun ingrediente ancora collegato a questo piatto.
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
-        <a href="{{ url_for('main.menu') }}" style="color: #2980b9;">← Torna al Menù</a>
     </div>
 </body>
 </html>
