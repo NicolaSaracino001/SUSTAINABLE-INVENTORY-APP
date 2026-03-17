@@ -15,6 +15,7 @@
         .btn-logout { color: #e17055; margin-top: 20px; display: block; text-decoration: none; font-weight: bold; }
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 10px; text-align: left; border-bottom: 1px solid #eee; }
+        .ai-card { border-left: 5px solid #0984e3; background: #ebf5ff; }
     </style>
 </head>
 <body>
@@ -58,9 +59,14 @@
         </div>
         {% endif %}
 
+        <div class="card ai-card">
+            <h3>🤖 Assistente Predittivo (Meteo)</h3>
+            <p style="font-size: 1.1rem; color: #2d3436;">{{ weather_suggestion }}</p>
+        </div>
+
         <div class="card">
-            <h3>Previsioni e Suggerimenti</h3>
-            <p>Il sistema sta analizzando i tuoi dati. Presto qui vedrai i suggerimenti basati sul meteo e sugli ordini passati.</p>
+            <h3>Consumi Recenti</h3>
+            <p>I dati di scarico automatico vengono registrati. Presto qui vedrai i grafici dei tuoi consumi.</p>
         </div>
     </div>
 </body>
