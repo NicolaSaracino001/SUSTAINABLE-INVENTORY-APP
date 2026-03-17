@@ -9,5 +9,6 @@ Benvenuto in S.I.M., un'applicazione Flask per la gestione intelligente del maga
 ## 📝 Fasi Completate
 - [x] Fase 1: Creazione cartelle e inizializzazione Git.
 - [x] Fase 2: Configurazione .env e requirements.txt via VS Code.
-- [x] Fase 3: Creazione del cuore dell'app (src/app.py) con setup Database e Login.
-- [ ] Fase 4: Creazione dei primi Modelli Database (User e Menu).
+- [x] Fase 3: Creazione del cuore dell'app (src/app.py).
+- [x] Fase 4: Definizione Modelli Database (User, Product, MenuItem, Recipe) per scarico automatico.
+- [ ] Fase 5: Creazione delle rotte di autenticazione (Login/Register).
