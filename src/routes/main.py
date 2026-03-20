@@ -1,8 +1,9 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
-from src.models.models import MenuItem, RecipeItem, Product, db
+from src.models.models import MenuItem, RecipeItem, Product, ConsumptionLog, db
 import os
 import requests
+from datetime import datetime
 
 main = Blueprint('main', __name__)
 
@@ -32,16 +33,16 @@ def dashboard():
     chart_thresholds = [p.min_threshold for p in all_products]
     
     weather = get_weather_info()
-    suggestion = "Meteo non disponibile. Basati sui consumi medi settimanali."
+    suggestion = "Meteo non disponibile. Basati sui consumi storici del locale."
     if weather:
         temp = weather['main']['temp']
         desc = weather['weather'][0]['description']
         if temp > 25:
-            suggestion = f"Previsti {temp}°C ({desc}). Suggerimento: Aumenta scorte bevande e piatti freddi."
+            suggestion = f"Previsti {temp}°C ({desc}). Suggerimento: Aumenta scorte bevande fredde e piatti freschi."
         elif temp < 12:
-            suggestion = f"Previsti {temp}°C ({desc}). Suggerimento: Favorisci piatti caldi e zuppe."
+            suggestion = f"Previsti {temp}°C ({desc}). Suggerimento: Favorisci piatti caldi, comfort food e zuppe."
         else:
-            suggestion = f"Meteo mite ({temp}°C). Affluenza costante prevista."
+            suggestion = f"Meteo mite ({temp}°C). Affluenza costante prevista, mantieni scorte regolari."
 
     return render_template('dashboard.html', 
                            name=current_user.restaurant_name, 
@@ -67,6 +68,7 @@ def add_inventory_item():
     new_product = Product(name=name, quantity=quantity, unit=unit, min_threshold=threshold, user_id=current_user.id)
     db.session.add(new_product)
     db.session.commit()
+    flash("✅ Prodotto aggiunto al magazzino.")
     return redirect(url_for('main.inventory'))
 
 @main.route('/menu')
@@ -83,6 +85,7 @@ def add_menu_item():
     new_item = MenuItem(name=name, price=price, user_id=current_user.id)
     db.session.add(new_item)
     db.session.commit()
+    flash("✅ Nuovo piatto creato con successo.")
     return redirect(url_for('main.menu'))
 
 @main.route('/recipe/<int:item_id>')
@@ -101,31 +104,41 @@ def add_recipe_item(item_id):
     new_recipe_item = RecipeItem(menu_item_id=item_id, product_id=product_id, quantity_needed=quantity)
     db.session.add(new_recipe_item)
     db.session.commit()
+    flash("✅ Ingrediente collegato alla ricetta.")
     return redirect(url_for('main.recipe', item_id=item_id))
 
-# ---> LOGICA DI SCARICO INTELLIGENTE (AGGIORNATA) <---
+# ---> LA LOGICA NEURALE INIZIA QUI <---
 @main.route('/sell_item/<int:item_id>', methods=['POST'])
 @login_required
 def sell_item(item_id):
     recipe_items = RecipeItem.query.filter_by(menu_item_id=item_id).all()
     
     if not recipe_items:
-        flash("Errore: Definisci la ricetta prima di scaricare!")
+        flash("❌ Errore: Definisci la ricetta prima di scaricare!")
         return redirect(url_for('main.menu'))
     
-    # 1. Controllo di sicurezza: abbiamo abbastanza ingredienti?
+    # Controllo sicurezza scorte
     for r_item in recipe_items:
         product = Product.query.get(r_item.product_id)
         if not product or product.quantity < r_item.quantity_needed:
-            # Se manca anche un solo ingrediente, blocchiamo tutto
             flash(f"❌ Impossibile registrare l'ordine! Quantità insufficiente di: {product.name if product else 'Ingrediente sconosciuto'}.")
             return redirect(url_for('main.menu'))
             
-    # 2. Se il controllo è passato, procediamo con lo scarico
+    # Scarico e Registrazione nel Dataset Storico
     for r_item in recipe_items:
         product = Product.query.get(r_item.product_id)
+        
+        # 1. Scala dal magazzino
         product.quantity -= r_item.quantity_needed
         
+        # 2. Crea un record per l'Intelligenza Artificiale Predittiva
+        log_entry = ConsumptionLog(
+            user_id=current_user.id,
+            product_id=product.id,
+            quantity_used=r_item.quantity_needed
+        )
+        db.session.add(log_entry)
+        
     db.session.commit()
-    flash("✅ Scontrino registrato! Magazzino aggiornato con successo.")
+    flash("✅ Scontrino registrato! Consumi salvati nel dataset storico per le previsioni AI.")
     return redirect(url_for('main.menu'))
