@@ -1,7 +1,9 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file
 from flask_login import login_required, current_user
 from src.models.models import MenuItem, RecipeItem, Product, ConsumptionLog, db
 from datetime import datetime
+import pandas as pd
+import io
 
 main = Blueprint('main', __name__)
 
@@ -15,11 +17,8 @@ def dashboard():
     chart_values = [p.quantity for p in all_products]
     chart_thresholds = [p.min_threshold for p in all_products]
     
-    # Valore Economico del Magazzino (Fase 23)
     total_inventory_value = sum([p.quantity * p.unit_cost for p in all_products])
     
-    # ---> IL NUOVO MOTORE PREDITTIVO FULMINEO <---
-    # Conta quanti consumi abbiamo registrato finora
     total_logs = ConsumptionLog.query.filter_by(user_id=current_user.id).count()
     
     if total_logs == 0:
@@ -27,8 +26,7 @@ def dashboard():
     elif total_logs < 10:
         insight = f"Apprendimento in corso ({total_logs} dati registrati). Servono più vendite per generare previsioni accurate sui giorni di picco."
     else:
-        # Quando avrai abbastanza dati, qui inseriremo la matematica avanzata!
-        insight = f"Modello Attivo ({total_logs} data points). I tuoi trend di consumo si stanno stabilizzando. Analisi dei giorni di picco in preparazione."
+        insight = f"Modello Attivo ({total_logs} data points). I tuoi trend di consumo si stanno stabilizzando. Analisi in preparazione."
 
     return render_template('dashboard.html', 
                            name=current_user.restaurant_name, 
@@ -120,7 +118,6 @@ def sell_item(item_id):
         product = Product.query.get(r_item.product_id)
         product.quantity -= r_item.quantity_needed
         
-        # Salvataggio nel database predittivo
         log_entry = ConsumptionLog(
             user_id=current_user.id,
             product_id=product.id,
@@ -131,3 +128,43 @@ def sell_item(item_id):
     db.session.commit()
     flash("Scontrino registrato! Consumi salvati nel dataset storico.")
     return redirect(url_for('main.menu'))
+
+# ---> FASE 24: PROFILO E EXPORT EXCEL <---
+@main.route('/profile')
+@login_required
+def profile():
+    return render_template('profile.html', user=current_user)
+
+@main.route('/export_excel')
+@login_required
+def export_excel():
+    products = Product.query.filter_by(user_id=current_user.id).all()
+    
+    if not products:
+        flash("Il magazzino è vuoto, nessun dato da esportare.")
+        return redirect(url_for('main.profile'))
+        
+    # Creiamo la tabella dati
+    data = {
+        "Prodotto": [p.name for p in products],
+        "Giacenza Attuale": [p.quantity for p in products],
+        "Unità": [p.unit for p in products],
+        "Soglia Allarme": [p.min_threshold for p in products],
+        "Costo Unitario (€)": [p.unit_cost for p in products],
+        "Valore Totale (€)": [round(p.quantity * p.unit_cost, 2) for p in products]
+    }
+    
+    df = pd.DataFrame(data)
+    
+    # Prepariamo il file Excel in memoria
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Giacenze_FoodLoop')
+    
+    output.seek(0)
+    
+    # Genera il nome file con la data di oggi
+    date_str = datetime.now().strftime("%Y-%m-%d")
+    filename = f"Report_Magazzino_{date_str}.xlsx"
+    
+    return send_file(output, download_name=filename, as_attachment=True)

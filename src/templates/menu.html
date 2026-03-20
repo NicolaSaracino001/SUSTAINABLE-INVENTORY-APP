@@ -9,7 +9,6 @@
         :root { --primary: #10b981; --primary-dark: #059669; --bg-color: #f8fafc; --card-bg: #ffffff; --text-main: #1e293b; --text-muted: #64748b; }
         body { font-family: 'Inter', sans-serif; margin: 0; background-color: var(--bg-color); color: var(--text-main); padding-top: 80px; }
 
-        /* TOP NAVBAR BIANCA */
         .navbar { position: fixed; top: 0; left: 0; right: 0; height: 80px; background: #ffffff; box-shadow: 0 2px 15px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between; padding: 0 50px; z-index: 1000; }
         .logo-container { display: flex; align-items: center; height: 100%; }
         .logo-img { height: 50px; width: auto; mix-blend-mode: multiply; }
@@ -20,7 +19,6 @@
         .btn-logout { color: #ef4444 !important; border: 2px solid #fee2e2; margin-left: 20px; }
         .btn-logout:hover { background: #ef4444 !important; color: white !important; border-color: #ef4444; }
 
-        /* AREA CONTENUTO */
         .content { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
         .header { margin-bottom: 30px; }
         .header h1 { margin: 0; font-size: 32px; color: var(--text-main); font-weight: 800; letter-spacing: -0.5px; }
@@ -63,6 +61,7 @@
             <a href="{{ url_for('main.dashboard') }}">Dashboard</a>
             <a href="{{ url_for('main.inventory') }}">Magazzino</a>
             <a href="{{ url_for('main.menu') }}" class="active">Gestione Menù</a>
+            <a href="{{ url_for('main.profile') }}">Profilo</a>
             <a href="{{ url_for('auth.logout') }}" class="btn-logout">Esci</a>
         </div>
     </div>

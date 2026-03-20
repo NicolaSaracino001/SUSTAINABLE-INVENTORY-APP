@@ -9,7 +9,6 @@
         :root { --primary: #10b981; --primary-dark: #059669; --bg-color: #f8fafc; --card-bg: #ffffff; --text-main: #1e293b; --text-muted: #64748b; }
         body { font-family: 'Inter', sans-serif; margin: 0; background-color: var(--bg-color); color: var(--text-main); padding-top: 80px; }
 
-        /* TOP NAVBAR BIANCA */
         .navbar { position: fixed; top: 0; left: 0; right: 0; height: 80px; background: #ffffff; box-shadow: 0 2px 15px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between; padding: 0 50px; z-index: 1000; }
         .logo-container { display: flex; align-items: center; height: 100%; }
         .logo-img { height: 50px; width: auto; mix-blend-mode: multiply; }
@@ -20,7 +19,6 @@
         .btn-logout { color: #ef4444 !important; border: 2px solid #fee2e2; margin-left: 20px; }
         .btn-logout:hover { background: #ef4444 !important; color: white !important; border-color: #ef4444; }
 
-        /* AREA CONTENUTO */
         .content { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
         .header { margin-bottom: 30px; display: flex; align-items: center; justify-content: space-between; }
         .header h1 { margin: 0; font-size: 32px; color: var(--text-main); font-weight: 800; letter-spacing: -0.5px; }
@@ -29,24 +27,25 @@
         .card { background: var(--card-bg); padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.03); margin-bottom: 30px; border: 1px solid #f1f5f9; }
         .card h3 { margin-top: 0; color: var(--text-main); font-size: 18px; margin-bottom: 20px;}
 
-        /* FORMS E INPUTS */
         .form-row { display: flex; gap: 15px; margin-bottom: 15px; align-items: center; flex-wrap: wrap;}
         select, input { flex: 1; padding: 14px 15px; border: 2px solid #e2e8f0; border-radius: 12px; font-family: 'Inter', sans-serif; font-size: 15px; outline: none; transition: all 0.3s; min-width: 200px; background: #f8fafc; }
         select:focus, input:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1); }
         
-        /* BOTTONI PREMIUM */
         .btn { padding: 12px 18px; border: none; border-radius: 10px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; color: white; transition: all 0.3s; text-decoration: none; display: inline-block; }
         .btn-add { background-color: var(--primary); }
         .btn-add:hover { background-color: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 8px 15px rgba(16, 185, 129, 0.2); }
         .btn-back { background-color: #f1f5f9; color: var(--text-main); border: 2px solid #e2e8f0; }
         .btn-back:hover { background-color: #e2e8f0; }
 
-        /* TABELLE */
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th { text-align: left; padding: 12px; color: var(--text-muted); font-weight: 600; border-bottom: 2px solid #e2e8f0; }
         td { padding: 15px 12px; border-bottom: 1px solid #f1f5f9; color: var(--text-main); vertical-align: middle;}
         
         .badge { background: #f1f5f9; padding: 6px 10px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--text-muted); }
+
+        .flash-msg { padding: 16px; margin-bottom: 25px; border-radius: 12px; font-weight: 500; display: flex; align-items: center; gap: 10px; }
+        .flash-error { background-color: #fef2f2; color: #ef4444; border-left: 4px solid #ef4444; }
+        .flash-success { background-color: #f0fdf4; color: #16a34a; border-left: 4px solid #16a34a; }
     </style>
 </head>
 <body>
@@ -59,6 +58,7 @@
             <a href="{{ url_for('main.dashboard') }}">Dashboard</a>
             <a href="{{ url_for('main.inventory') }}">Magazzino</a>
             <a href="{{ url_for('main.menu') }}" class="active">Gestione Menù</a>
+            <a href="{{ url_for('main.profile') }}">Profilo</a>
             <a href="{{ url_for('auth.logout') }}" class="btn-logout">Esci</a>
         </div>
     </div>
@@ -67,13 +67,25 @@
         <div class="header">
             <div>
                 <h1>Distinta Base: {{ item.name }}</h1>
-                <p>Componi il piatto inserendo le dosi degli ingredienti.</p>
+                <p>Componi la ricetta inserendo le dosi degli ingredienti.</p>
             </div>
             <a href="{{ url_for('main.menu') }}" class="btn btn-back">⬅ Torna al Menù</a>
         </div>
 
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            {% for message in messages %}
+              {% if 'Errore' in message or '❌' in message %}
+                <div class="flash-msg flash-error"><span>⚠️</span> {{ message }}</div>
+              {% else %}
+                <div class="flash-msg flash-success"><span>✅</span> {{ message }}</div>
+              {% endif %}
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
         <div class="card">
-            <h3>➕ Aggiungi un Ingrediente</h3>
+            <h3>➕ Inserimento Manuale Ingredienti</h3>
             <form action="{{ url_for('main.add_recipe_item', item_id=item.id) }}" method="POST" class="form-row">
                 <select name="product_id" required>
                     <option value="" disabled selected>Scegli dal Magazzino...</option>
@@ -104,7 +116,7 @@
                     {% else %}
                     <tr>
                         <td colspan="2" style="text-align: center; color: var(--text-muted); padding: 40px;">
-                            Nessun ingrediente ancora collegato a questo piatto.
+                            Nessun ingrediente collegato per questo piatto.
                         </td>
                     </tr>
                     {% endfor %}

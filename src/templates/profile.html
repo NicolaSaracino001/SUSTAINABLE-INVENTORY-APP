@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FoodLoop - Profilo Ristorante</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --primary: #10b981; --primary-dark: #059669; --bg-color: #f8fafc; --card-bg: #ffffff; --text-main: #1e293b; --text-muted: #64748b; }
+        body { font-family: 'Inter', sans-serif; margin: 0; background-color: var(--bg-color); color: var(--text-main); padding-top: 80px; }
+
+        .navbar { position: fixed; top: 0; left: 0; right: 0; height: 80px; background: #ffffff; box-shadow: 0 2px 15px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between; padding: 0 50px; z-index: 1000; }
+        .logo-container { display: flex; align-items: center; height: 100%; }
+        .logo-img { height: 50px; width: auto; mix-blend-mode: multiply; }
+        .fallback-text { font-size: 24px; font-weight: 800; color: var(--primary); margin: 0; display: none; }
+        
+        .nav-links { display: flex; gap: 15px; align-items: center; }
+        .nav-links a { color: var(--text-muted); text-decoration: none; font-weight: 600; padding: 10px 18px; border-radius: 8px; transition: all 0.2s; font-size: 15px; }
+        .nav-links a:hover, .nav-links a.active { background: #f1f5f9; color: var(--primary); }
+        .btn-logout { color: #ef4444 !important; border: 2px solid #fee2e2; margin-left: 20px; }
+        .btn-logout:hover { background: #ef4444 !important; color: white !important; border-color: #ef4444; }
+
+        .content { max-width: 800px; margin: 0 auto; padding: 40px 20px; text-align: center; }
+        
+        .profile-icon { font-size: 80px; margin-bottom: 20px; display: inline-block; background: #ecfdf5; padding: 20px; border-radius: 50%; box-shadow: 0 10px 25px rgba(16, 185, 129, 0.1); }
+        h1 { margin: 0; font-size: 36px; color: var(--text-main); font-weight: 800; letter-spacing: -0.5px; }
+        p { color: var(--text-muted); font-size: 18px; margin-top: 5px; }
+
+        .card { background: var(--card-bg); padding: 40px; border-radius: 24px; box-shadow: 0 15px 35px rgba(0,0,0,0.04); border: 1px solid #f1f5f9; margin-top: 40px; text-align: left;}
+        
+        .info-group { margin-bottom: 25px; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px; }
+        .info-group label { display: block; font-size: 14px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+        .info-group .data { font-size: 20px; font-weight: 700; color: var(--text-main); }
+
+        .btn-excel { display: block; width: 100%; text-align: center; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 18px; border: none; border-radius: 12px; font-size: 18px; font-weight: 700; cursor: pointer; transition: all 0.3s; text-decoration: none; margin-top: 30px; box-shadow: 0 10px 20px rgba(16, 185, 129, 0.2); }
+        .btn-excel:hover { transform: translateY(-3px); box-shadow: 0 15px 30px rgba(16, 185, 129, 0.3); }
+
+        .flash-msg { padding: 16px; margin-bottom: 25px; border-radius: 12px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 10px; background-color: #fef2f2; color: #ef4444; border-left: 4px solid #ef4444; }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <div class="logo-container">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="logo-img" onerror="this.style.display='none'; document.getElementById('testo-logo').style.display='block';">
+            <h2 id="testo-logo" class="fallback-text">FoodLoop</h2>
+        </div>
+        <div class="nav-links">
+            <a href="{{ url_for('main.dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('main.inventory') }}">Magazzino</a>
+            <a href="{{ url_for('main.menu') }}">Gestione Menù</a>
+            <a href="{{ url_for('main.profile') }}" class="active">Profilo</a>
+            <a href="{{ url_for('auth.logout') }}" class="btn-logout">Esci</a>
+        </div>
+    </div>
+
+    <div class="content">
+        <div class="profile-icon">👨‍🍳</div>
+        <h1>{{ user.restaurant_name }}</h1>
+        <p>Centro di controllo e reportistica</p>
+
+        {% with messages = get_flashed_messages() %}
+          {% if messages %}
+            {% for message in messages %}
+              <div class="flash-msg"><span>⚠️</span> {{ message }}</div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <div class="card">
+            <div class="info-group">
+                <label>Email Operatore</label>
+                <div class="data">{{ user.email }}</div>
+            </div>
+            <div class="info-group" style="border-bottom: none;">
+                <label>Esportazione di Fine Mese</label>
+                <div style="color: var(--text-muted); font-size: 15px; margin-top: 5px;">
+                    Scarica l'inventario completo con il calcolo del valore totale in formato compatibile per Excel e per il commercialista.
+                </div>
+            </div>
+
+            <a href="{{ url_for('main.export_excel') }}" class="btn-excel">📊 Scarica Report Magazzino (.xlsx)</a>
+        </div>
+    </div>
+</body>
+</html>
