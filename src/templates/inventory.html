@@ -53,9 +53,8 @@
         th { text-align: left; padding: 12px; color: var(--text-muted); font-weight: 600; border-bottom: 2px solid #e2e8f0; }
         td { padding: 15px 12px; border-bottom: 1px solid #f1f5f9; color: var(--text-main); }
         .badge { background: #f1f5f9; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
-        
-        /* I dipendenti non vedono il prezzo */
         .price-badge { background: #ecfdf5; color: #059669; padding: 4px 8px; border-radius: 6px; font-size: 13px; font-weight: 700; }
+        .sup-badge { background: #fef3c7; color: #d97706; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; }
 
         .flash-msg { padding: 16px; margin-bottom: 25px; border-radius: 12px; font-weight: 500; display: flex; align-items: center; gap: 10px; background-color: #f0fdf4; color: #16a34a; border-left: 4px solid #16a34a; }
     </style>
@@ -70,8 +69,7 @@
             <a href="{{ url_for('main.dashboard') }}" class="nav-item">Dashboard</a>
             <a href="{{ url_for('main.inventory') }}" class="nav-item active">Magazzino</a>
             <a href="{{ url_for('main.menu') }}" class="nav-item">Gestione Menù</a>
-            
-            <div class="user-menu">
+            <a href="{{ url_for('main.suppliers') }}" class="nav-item">Fornitori</a> <div class="user-menu">
                 <div class="user-details">
                     <span class="res-name">{{ current_user.get_restaurant_name }}</span>
                     <span class="user-name">{{ current_user.full_name }} ({% if current_user.role == 'owner' %}Admin{% else %}Staff{% endif %})</span>
@@ -93,7 +91,7 @@
     <div class="content">
         <div class="header">
             <h1>Gestione Magazzino</h1>
-            <p>Aggiungi le materie prime e tieni traccia delle scorte.</p>
+            <p>Aggiungi le materie prime, tieni traccia dei costi e dei fornitori.</p>
         </div>
 
         {% with messages = get_flashed_messages() %}
@@ -110,6 +108,13 @@
                 <div class="form-row">
                     <input type="text" name="name" placeholder="Es. Farina Tipo 1" required>
                     <input type="number" step="0.01" name="quantity" placeholder="Giacenza Iniziale (es. 20)" required>
+                    
+                    <select name="supplier_id">
+                        <option value="">Nessun fornitore specifico</option>
+                        {% for sup in suppliers %}
+                        <option value="{{ sup.id }}">{{ sup.name }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="form-row">
                     <select name="unit" required>
@@ -139,7 +144,7 @@
                     <tr>
                         <th>Prodotto</th>
                         <th>Quantità Disponibile</th>
-                        <th>Soglia Allarme</th>
+                        <th>Fornitore</th>
                         {% if current_user.role == 'owner' %}<th>Costo Unitario</th>{% endif %}
                     </tr>
                 </thead>
@@ -148,7 +153,15 @@
                     <tr>
                         <td style="font-weight: 600;">{{ product.name }}</td>
                         <td>{{ product.quantity }} <span class="badge">{{ product.unit }}</span></td>
-                        <td style="color: var(--text-muted);">{{ product.min_threshold }} <span class="badge">{{ product.unit }}</span></td>
+                        
+                        <td>
+                            {% if product.supplier %}
+                                <span class="sup-badge">{{ product.supplier.name }}</span>
+                            {% else %}
+                                <span style="color: var(--text-muted); font-size: 13px;">Non assegnato</span>
+                            {% endif %}
+                        </td>
+                        
                         {% if current_user.role == 'owner' %}
                             <td><span class="price-badge">{{ product.unit_cost }} €</span></td>
                         {% endif %}

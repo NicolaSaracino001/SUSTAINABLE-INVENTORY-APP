@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FoodLoop - Scheda Ricetta</title>
+    <title>FoodLoop - Gestione Menù</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root { --primary: #10b981; --primary-dark: #059669; --bg-color: #f8fafc; --card-bg: #ffffff; --text-main: #1e293b; --text-muted: #64748b; }
@@ -34,43 +34,31 @@
         .logout-link:hover { background-color: #fef2f2 !important; color: #dc2626 !important; }
 
         .content { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
-        .header { margin-bottom: 30px; display: flex; align-items: center; justify-content: space-between; }
+        .header { margin-bottom: 30px; }
         .header h1 { margin: 0; font-size: 32px; color: var(--text-main); font-weight: 800; letter-spacing: -0.5px; }
         .header p { margin: 8px 0 0 0; color: var(--text-muted); font-size: 16px; }
+
+        .card { background: var(--card-bg); padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.03); margin-bottom: 30px; border: 1px solid #f1f5f9; }
+        .card h3 { margin-top: 0; color: var(--text-main); font-size: 18px; margin-bottom: 20px;}
+
+        .form-row { display: flex; gap: 15px; margin-bottom: 15px; align-items: center;}
+        input { flex: 1; padding: 14px 15px; border: 2px solid #e2e8f0; border-radius: 12px; font-family: 'Inter', sans-serif; font-size: 15px; outline: none; transition: all 0.3s; background: #f8fafc;}
+        input:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1); }
         
-        .btn-back { background-color: #f1f5f9; color: var(--text-main); border: 2px solid #e2e8f0; padding: 12px 18px; border-radius: 10px; font-weight: 600; text-decoration: none; transition: 0.3s;}
-        .btn-back:hover { background-color: #e2e8f0; }
-
-        /* NUOVO LAYOUT A GRIGLIA */
-        .grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: start;}
-        @media (max-width: 900px) { .grid-container { grid-template-columns: 1fr; } }
-
-        .card { background: var(--card-bg); padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.03); border: 1px solid #f1f5f9; margin-bottom: 30px;}
-        .card h3 { margin-top: 0; color: var(--text-main); font-size: 18px; margin-bottom: 20px; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px;}
-
-        /* STILI FORM RICETTA */
-        .recipe-image-preview { width: 100%; height: 250px; border-radius: 12px; object-fit: cover; background-color: #f1f5f9; margin-bottom: 20px; border: 2px dashed #cbd5e1; display: flex; align-items: center; justify-content: center; font-weight: 600; color: #94a3b8;}
-        .input-group { margin-bottom: 15px; }
-        .input-group label { display: block; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px;}
-        .input-group input, .input-group select, .input-group textarea { width: 100%; padding: 12px 15px; border: 2px solid #e2e8f0; border-radius: 10px; font-family: 'Inter', sans-serif; font-size: 15px; box-sizing: border-box; outline: none; transition: 0.3s; background: #f8fafc;}
-        .input-group input:focus, .input-group textarea:focus { border-color: var(--primary); background: white; }
-        .input-group textarea { resize: vertical; min-height: 120px; }
-        
-        .btn { padding: 12px 18px; border: none; border-radius: 10px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600; color: white; transition: all 0.3s; display: inline-block; width: 100%; }
-        .btn-primary { background-color: var(--primary); }
-        .btn-primary:hover { background-color: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 8px 15px rgba(16, 185, 129, 0.2); }
-        .btn-secondary { background-color: #3b82f6; }
-        .btn-secondary:hover { background-color: #2563eb; transform: translateY(-2px);}
-
-        /* TABELLA INGREDIENTI */
-        .form-row-ing { display: flex; gap: 10px; margin-bottom: 15px;}
-        .form-row-ing select { flex: 2; }
-        .form-row-ing input { flex: 1; }
+        .btn { padding: 12px 18px; border: none; border-radius: 10px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; color: white; transition: all 0.3s; text-decoration: none; display: inline-block; }
+        .btn-add { background-color: var(--primary); }
+        .btn-add:hover { background-color: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 8px 15px rgba(16, 185, 129, 0.2); }
+        .btn-recipe { background-color: #3b82f6; }
+        .btn-recipe:hover { background-color: #2563eb; }
+        .btn-sell { background-color: #f59e0b; color: white; }
+        .btn-sell:hover { background-color: #d97706; }
 
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th { text-align: left; padding: 12px; color: var(--text-muted); font-weight: 600; border-bottom: 2px solid #e2e8f0; }
         td { padding: 15px 12px; border-bottom: 1px solid #f1f5f9; color: var(--text-main); vertical-align: middle;}
-        .badge { background: #f1f5f9; padding: 6px 10px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--text-muted); }
+        
+        .price-tag { font-weight: 700; color: var(--primary-dark); }
+        .action-buttons { display: flex; gap: 10px; }
 
         .flash-msg { padding: 16px; margin-bottom: 25px; border-radius: 12px; font-weight: 500; display: flex; align-items: center; gap: 10px; }
         .flash-error { background-color: #fef2f2; color: #ef4444; border-left: 4px solid #ef4444; }
@@ -87,6 +75,7 @@
             <a href="{{ url_for('main.dashboard') }}" class="nav-item">Dashboard</a>
             <a href="{{ url_for('main.inventory') }}" class="nav-item">Magazzino</a>
             <a href="{{ url_for('main.menu') }}" class="nav-item active">Gestione Menù</a>
+            <a href="{{ url_for('main.suppliers') }}" class="nav-item">Fornitori</a>
             
             <div class="user-menu">
                 <div class="user-details">
@@ -109,17 +98,14 @@
     
     <div class="content">
         <div class="header">
-            <div>
-                <h1>Manuale: {{ item.name }}</h1>
-                <p>Configura la preparazione e la distinta base.</p>
-            </div>
-            <a href="{{ url_for('main.menu') }}" class="btn-back">⬅ Torna al Menù</a>
+            <h1>Gestione Menù</h1>
+            <p>Crea i tuoi piatti e collegali agli ingredienti del magazzino.</p>
         </div>
-
+        
         {% with messages = get_flashed_messages() %}
           {% if messages %}
             {% for message in messages %}
-              {% if 'Errore' in message or '❌' in message %}
+              {% if 'Errore' in message or 'Impossibile' in message or '❌' in message %}
                 <div class="flash-msg flash-error"><span>⚠️</span> {{ message }}</div>
               {% else %}
                 <div class="flash-msg flash-success"><span>✅</span> {{ message }}</div>
@@ -128,84 +114,52 @@
           {% endif %}
         {% endwith %}
 
-        <div class="grid-container">
-            <div class="card">
-                <h3>📖 Dettagli Preparazione</h3>
-                
-                {% if item.image_file != 'default.jpg' %}
-                    <img src="{{ url_for('static', filename='recipes_img/' + item.image_file) }}" class="recipe-image-preview" style="border: none;">
+        <div class="card">
+            <h3>➕ Aggiungi un nuovo Piatto</h3>
+            <form action="{{ url_for('main.add_menu_item') }}" method="POST" class="form-row">
+                <input type="text" name="name" placeholder="Es. Pizza Margherita" required>
+                {% if current_user.role == 'owner' %}
+                    <input type="number" step="0.01" name="price" placeholder="Prezzo (€)" required style="max-width: 150px;">
                 {% else %}
-                    <div class="recipe-image-preview">Nessuna foto caricata</div>
+                    <input type="hidden" name="price" value="0">
                 {% endif %}
+                <button type="submit" class="btn btn-add">Crea Piatto</button>
+            </form>
+        </div>
 
-                <form action="{{ url_for('main.update_recipe_details', item_id=item.id) }}" method="POST" enctype="multipart/form-data">
-                    
-                    <div class="input-group">
-                        <label>Aggiorna Foto Piatto</label>
-                        <input type="file" name="image" accept="image/png, image/jpeg">
-                    </div>
-
-                    <div style="display: flex; gap: 15px;">
-                        <div class="input-group" style="flex: 1;">
-                            <label>Tempo Cottura/Prep. (Minuti)</label>
-                            <input type="number" name="prep_time" value="{{ item.prep_time or '' }}" placeholder="Es. 15">
-                        </div>
-                        <div class="input-group" style="flex: 2;">
-                            <label>Allergeni (HACCP)</label>
-                            <input type="text" name="allergens" value="{{ item.allergens or '' }}" placeholder="Es. Glutine, Lattosio, Soia">
-                        </div>
-                    </div>
-
-                    <div class="input-group">
-                        <label>Procedimento passo-passo</label>
-                        <textarea name="instructions" placeholder="1. Tagliare le verdure...&#10;2. Portare l'acqua a ebollizione...">{{ item.instructions or '' }}</textarea>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary">Salva Dettagli Manuale</button>
-                </form>
-            </div>
-
-            <div>
-                <div class="card" style="margin-bottom: 30px;">
-                    <h3>➕ Inserisci Ingrediente</h3>
-                    <form action="{{ url_for('main.add_recipe_item', item_id=item.id) }}" method="POST" class="form-row-ing">
-                        <select name="product_id" required class="input-group" style="margin-bottom: 0;">
-                            <option value="" disabled selected>Cerca nel Magazzino...</option>
-                            {% for p in products %}
-                            <option value="{{ p.id }}">{{ p.name }} (in {{ p.unit }})</option>
-                            {% endfor %}
-                        </select>
-                        <input type="number" step="0.01" name="quantity" placeholder="Dose (es. 0.5)" required class="input-group" style="margin-bottom: 0; padding: 12px;">
-                        <button type="submit" class="btn btn-secondary" style="width: auto;">Aggiungi</button>
-                    </form>
-                </div>
-
-                <div class="card">
-                    <h3>📜 Distinta Base (Food Cost)</h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Ingrediente</th>
-                                <th>Dose per porzione</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for r in recipe_items %}
-                            <tr>
-                                <td style="font-weight: 600;">{{ r.product.name }}</td>
-                                <td>{{ r.quantity_needed }} <span class="badge">{{ r.product.unit }}</span></td>
-                            </tr>
-                            {% else %}
-                            <tr>
-                                <td colspan="2" style="text-align: center; color: var(--text-muted); padding: 40px;">
-                                    Nessun ingrediente collegato.
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+        <div class="card">
+            <h3>📋 La tua Carta dei Piatti</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nome del Piatto</th>
+                        {% if current_user.role == 'owner' %}<th>Prezzo di Vendita</th>{% endif %}
+                        <th>Azioni Operative</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in menu_items %}
+                    <tr>
+                        <td style="font-weight: 600;">{{ item.name }}</td>
+                        {% if current_user.role == 'owner' %}
+                            <td class="price-tag">{{ item.price }} €</td>
+                        {% endif %}
+                        <td class="action-buttons">
+                            <a href="{{ url_for('main.recipe', item_id=item.id) }}" class="btn btn-recipe">📝 Modifica Ricetta</a>
+                            <form action="{{ url_for('main.sell_item', item_id=item.id) }}" method="POST" style="margin: 0;">
+                                <button type="submit" class="btn btn-sell">🛒 Simula Ordine</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 30px;">
+                            Non hai ancora aggiunto piatti al tuo menù.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </body>

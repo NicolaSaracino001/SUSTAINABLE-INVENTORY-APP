@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, current_app
 from flask_login import login_required, current_user
-from src.models.models import MenuItem, RecipeItem, Product, ConsumptionLog, User, db
+from src.models.models import MenuItem, RecipeItem, Product, ConsumptionLog, User, Supplier, db
 from datetime import datetime
 from functools import wraps
 from werkzeug.utils import secure_filename
@@ -46,11 +46,11 @@ def dashboard():
 
     total_logs = ConsumptionLog.query.filter_by(user_id=rest_id).count()
     if total_logs == 0:
-        insight = "Fase di Apprendimento: il sistema neurale sta analizzando i dati."
+        insight = "Fase di Apprendimento: il sistema sta analizzando i dati."
     elif total_logs < 10:
-        insight = f"Apprendimento in corso ({total_logs} dati registrati). Servono più vendite per le previsioni."
+        insight = f"Apprendimento in corso ({total_logs} dati). Servono più vendite per le previsioni."
     else:
-        insight = f"Modello Attivo ({total_logs} data points). I trend di consumo si stanno stabilizzando."
+        insight = f"Modello Attivo ({total_logs} data points). I trend si stanno stabilizzando."
 
     return render_template('dashboard.html', 
                            name=current_user.get_restaurant_name, 
@@ -66,8 +66,10 @@ def dashboard():
 @main.route('/inventory')
 @login_required
 def inventory():
-    products = Product.query.filter_by(user_id=current_user.get_restaurant_id).all()
-    return render_template('inventory.html', products=products)
+    rest_id = current_user.get_restaurant_id
+    products = Product.query.filter_by(user_id=rest_id).all()
+    suppliers = Supplier.query.filter_by(user_id=rest_id).all()
+    return render_template('inventory.html', products=products, suppliers=suppliers)
 
 @main.route('/add_inventory_item', methods=['POST'])
 @login_required
@@ -78,12 +80,37 @@ def add_inventory_item():
     threshold = float(request.form.get('threshold'))
     cost_str = request.form.get('unit_cost')
     unit_cost = float(cost_str) if cost_str else 0.0
+    supplier_id = request.form.get('supplier_id')
     
-    new_product = Product(name=name, quantity=quantity, unit=unit, min_threshold=threshold, unit_cost=unit_cost, user_id=current_user.get_restaurant_id)
+    new_product = Product(
+        name=name, quantity=quantity, unit=unit, 
+        min_threshold=threshold, unit_cost=unit_cost, 
+        user_id=current_user.get_restaurant_id,
+        supplier_id=supplier_id if supplier_id else None
+    )
     db.session.add(new_product)
     db.session.commit()
     flash("Prodotto aggiunto al magazzino.")
     return redirect(url_for('main.inventory'))
+
+# ---> FASE 29: ROTTE PER I FORNITORI <---
+@main.route('/suppliers')
+@login_required
+def suppliers():
+    suppliers = Supplier.query.filter_by(user_id=current_user.get_restaurant_id).all()
+    return render_template('suppliers.html', suppliers=suppliers)
+
+@main.route('/add_supplier', methods=['POST'])
+@login_required
+def add_supplier():
+    name = request.form.get('name')
+    contact = request.form.get('contact')
+    
+    new_sup = Supplier(name=name, contact_info=contact, user_id=current_user.get_restaurant_id)
+    db.session.add(new_sup)
+    db.session.commit()
+    flash("Fornitore salvato in rubrica con successo! 🚚")
+    return redirect(url_for('main.suppliers'))
 
 @main.route('/menu')
 @login_required
@@ -110,13 +137,10 @@ def recipe(item_id):
     recipe_items = RecipeItem.query.filter_by(menu_item_id=item_id).all()
     return render_template('recipe.html', item=item, products=products, recipe_items=recipe_items)
 
-# ---> FASE 28: SALVATAGGIO FOTO E INFO RICETTA <---
 @main.route('/update_recipe_details/<int:item_id>', methods=['POST'])
 @login_required
 def update_recipe_details(item_id):
     item = MenuItem.query.get_or_404(item_id)
-    
-    # Previene modifiche da altri ristoranti
     if item.user_id != current_user.get_restaurant_id:
         flash("Accesso negato.")
         return redirect(url_for('main.menu'))
@@ -126,19 +150,13 @@ def update_recipe_details(item_id):
     item.allergens = request.form.get('allergens')
     item.instructions = request.form.get('instructions')
 
-    # Gestione Caricamento Immagine
     if 'image' in request.files:
         pic = request.files['image']
         if pic.filename != '':
-            # Genera nome sicuro e unico
             filename = secure_filename(pic.filename)
             unique_name = str(uuid.uuid4().hex) + "_" + filename
-            
-            # Crea la cartella se non esiste
             upload_folder = os.path.join(current_app.root_path, 'static', 'recipes_img')
             os.makedirs(upload_folder, exist_ok=True)
-            
-            # Salva fisicamente il file e il nome nel DB
             pic.save(os.path.join(upload_folder, unique_name))
             item.image_file = unique_name
 
@@ -207,8 +225,7 @@ def export_excel():
         flash("Il magazzino è vuoto, nessun dato da esportare.")
         return redirect(url_for('main.profile'))
         
-    data = {"Prodotto": [p.name for p in products], "Giacenza Attuale": [p.quantity for p in products], "Unità": [p.unit for p in products], "Costo Unitario (€)": [p.unit_cost for p in products], "Valore Totale (€)": [round(p.quantity * p.unit_cost, 2) for p in products]}
-    
+    data = {"Prodotto": [p.name for p in products], "Giacenza": [p.quantity for p in products], "Unità": [p.unit for p in products], "Costo": [p.unit_cost for p in products]}
     df = pd.DataFrame(data)
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
@@ -251,12 +268,12 @@ def add_staff():
     password = request.form.get('password')
     
     if User.query.filter_by(email=email).first():
-        flash("❌ Errore: Questa email è già in uso nel sistema.")
+        flash("❌ Errore: Questa email è già in uso.")
         return redirect(url_for('main.settings'))
         
     new_staff = User(email=email, full_name=full_name, role='staff', parent_id=current_user.id)
     new_staff.set_password(password)
     db.session.add(new_staff)
     db.session.commit()
-    flash(f"✅ Account dipendente per {full_name} creato con successo!")
+    flash(f"✅ Account dipendente per {full_name} creato!")
     return redirect(url_for('main.settings'))

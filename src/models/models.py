@@ -21,6 +21,9 @@ class User(UserMixin, db.Model):
     menu_items = db.relationship('MenuItem', backref='owner', lazy=True, foreign_keys="MenuItem.user_id")
     consumptions = db.relationship('ConsumptionLog', backref='owner', lazy=True, foreign_keys="ConsumptionLog.user_id")
     
+    # FASE 29: Relazione con i fornitori
+    suppliers = db.relationship('Supplier', backref='owner', lazy=True, foreign_keys="Supplier.user_id")
+    
     staff_members = db.relationship('User', backref=db.backref('employer', remote_side=[id]))
 
     @property
@@ -37,6 +40,15 @@ class User(UserMixin, db.Model):
     def check_password(self, password):
         return check_password_hash(self.password, password)
 
+# ---> FASE 29: TABELLA FORNITORI <---
+class Supplier(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), nullable=False)
+    contact_info = db.Column(db.String(150), nullable=True) # Telefono o Email
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    # Collegamento inverso dal fornitore ai prodotti
+    products = db.relationship('Product', backref='supplier', lazy=True)
+
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
@@ -45,19 +57,19 @@ class Product(db.Model):
     min_threshold = db.Column(db.Float, nullable=False, default=5.0)
     unit_cost = db.Column(db.Float, nullable=False, default=0.0) 
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    
+    # FASE 29: Collegamento al Fornitore
+    supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'), nullable=True)
 
 class MenuItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     price = db.Column(db.Float, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    
-    # ---> FASE 28: DETTAGLI RICETTA AVANZATA <---
-    prep_time = db.Column(db.Integer, nullable=True) # Tempo in minuti
-    allergens = db.Column(db.String(200), nullable=True) # Es: Glutine, Lattosio
-    instructions = db.Column(db.Text, nullable=True) # Procedimento
-    image_file = db.Column(db.String(150), nullable=False, default='default.jpg') # Foto
-    
+    prep_time = db.Column(db.Integer, nullable=True) 
+    allergens = db.Column(db.String(200), nullable=True) 
+    instructions = db.Column(db.Text, nullable=True) 
+    image_file = db.Column(db.String(150), nullable=False, default='default.jpg') 
     recipes = db.relationship('RecipeItem', backref='menu_item', lazy=True, cascade="all, delete-orphan")
 
 class RecipeItem(db.Model):
