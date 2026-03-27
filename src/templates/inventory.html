@@ -56,8 +56,9 @@
         .badge { background: #f1f5f9; padding: 6px 10px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--text-muted); }
         .badge-danger { background: #fef2f2; color: #ef4444; }
 
-        .btn-delete { background: #fee2e2; color: #ef4444; border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: 700; border: 1px solid transparent; cursor: pointer; transition: 0.2s;}
-        .btn-delete:hover { background: #fecaca; transform: scale(1.05);}
+        /* Nuovo stile per il pulsante Allinea */
+        .btn-align { background: #e0f2fe; color: #0284c7; border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: 700; border: 1px solid transparent; cursor: pointer; transition: 0.2s;}
+        .btn-align:hover { background: #bae6fd; transform: scale(1.05);}
 
         .flash-msg { padding: 16px; margin-bottom: 25px; border-radius: 12px; font-weight: 500; display: flex; align-items: center; gap: 10px; background-color: #f0fdf4; color: #16a34a; border-left: 4px solid #16a34a; }
     </style>
@@ -96,7 +97,7 @@
     <div class="content">
         <div class="header">
             <h1>Magazzino Centrale 📦</h1>
-            <p>Gestisci le materie prime, registra gli acquisti e traccia gli sprechi.</p>
+            <p>Gestisci le materie prime, registra gli acquisti e allinea le giacenze reali.</p>
         </div>
 
         {% with messages = get_flashed_messages() %}
@@ -112,7 +113,7 @@
             <form action="{{ url_for('main.add_inventory_item') }}" method="POST">
                 <div class="form-row">
                     <input type="text" name="name" placeholder="Es. Farina 00" required>
-                    <input type="number" step="0.01" name="quantity" placeholder="Giacenza (Es. 50)" required>
+                    <input type="number" step="0.01" name="quantity" placeholder="Giacenza Iniziale (Es. 50)" required>
                     <input type="text" name="unit" placeholder="Unità (Es. kg, litri)" required style="flex: 0.5;">
                 </div>
                 <div class="form-row">
@@ -135,10 +136,10 @@
                 <thead>
                     <tr>
                         <th>Prodotto</th>
-                        <th>Giacenza</th>
+                        <th>Giacenza Teorica</th>
                         <th>Costo Unit.</th>
                         <th>Valore Tot.</th>
-                        <th>♻️ Scarica Spreco</th>
+                        <th>⚖️ Conta Reale (Allinea)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -154,9 +155,9 @@
                         <td style="font-weight: 700;">{{ "%.2f"|format(p.quantity * p.unit_cost) }} €</td>
                         
                         <td>
-                            <form action="{{ url_for('main.add_waste', product_id=p.id) }}" method="POST" style="display:flex; gap: 5px; margin:0;">
-                                <input type="number" step="0.01" name="quantity" placeholder="Dose persa" required style="width: 100px; min-width: 0; padding: 10px; border-radius: 8px;">
-                                <button type="submit" class="btn-delete" title="Segnala scadenza o spreco">Segnala</button>
+                            <form action="{{ url_for('main.align_inventory', product_id=p.id) }}" method="POST" style="display:flex; gap: 5px; margin:0;">
+                                <input type="number" step="0.01" name="actual_quantity" placeholder="Giacenza vera" required style="width: 120px; min-width: 0; padding: 10px; border-radius: 8px;">
+                                <button type="submit" class="btn-align" title="Allinea magazzino con la cella frigo">Allinea</button>
                             </form>
                         </td>
 

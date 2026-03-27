@@ -1,6 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, current_app
 from flask_login import login_required, current_user
-# FASE 34: Aggiunto WasteLog all'import
 from src.models.models import MenuItem, RecipeItem, Product, ConsumptionLog, User, Supplier, WasteLog, db
 from datetime import datetime
 from functools import wraps
@@ -102,37 +101,46 @@ def add_inventory_item():
     flash("Prodotto aggiunto al magazzino.")
     return redirect(url_for('main.inventory'))
 
-# ---> FASE 34: ROTTA PER REGISTRARE LO SPRECO <---
-@main.route('/add_waste/<int:product_id>', methods=['POST'])
+# ---> FASE 34: INVENTARIO DIFFERENZIALE AUTOMATICO <---
+@main.route('/align_inventory/<int:product_id>', methods=['POST'])
 @login_required
-def add_waste(product_id):
+def align_inventory(product_id):
     product = Product.query.get_or_404(product_id)
     if product.user_id != current_user.get_restaurant_id:
-        flash("Accesso negato.")
+        flash("❌ Accesso negato.")
         return redirect(url_for('main.inventory'))
 
-    quantity = float(request.form.get('quantity'))
+    actual_quantity = float(request.form.get('actual_quantity'))
 
-    if quantity > product.quantity:
-        flash("❌ Errore: La quantità sprecata non può essere maggiore della giacenza attuale.")
+    if actual_quantity < 0:
+        flash("❌ Errore: La giacenza non può essere negativa.")
         return redirect(url_for('main.inventory'))
 
-    # Rimuoviamo la quantità dal magazzino
-    product.quantity -= quantity
-    # Calcoliamo quanti soldi abbiamo buttato
-    cost_lost = quantity * product.unit_cost
+    if actual_quantity < product.quantity:
+        # Abbiamo meno merce del previsto = C'è stato uno SPRECO/PERDITA
+        wasted_qty = product.quantity - actual_quantity
+        cost_lost = wasted_qty * product.unit_cost
+        
+        waste_entry = WasteLog(
+            user_id=current_user.get_restaurant_id,
+            product_id=product.id,
+            quantity_wasted=wasted_qty,
+            cost_lost=cost_lost
+        )
+        db.session.add(waste_entry)
+        flash(f"⚖️ Magazzino allineato! Rilevati {round(wasted_qty, 2)} {product.unit} di scarto per '{product.name}'. (Costo perso: {round(cost_lost, 2)} €)")
+    
+    elif actual_quantity > product.quantity:
+        # Abbiamo più merce del previsto = Errore di caricamento o bonus
+        added_qty = actual_quantity - product.quantity
+        flash(f"⚖️ Magazzino allineato! Aggiunti {round(added_qty, 2)} {product.unit} extra di '{product.name}' trovati in giacenza.")
+    else:
+        flash(f"✅ Nessuna differenza rilevata. I conti di '{product.name}' tornano perfettamente!")
 
-    # Salviamo lo storico nel database
-    waste_entry = WasteLog(
-        user_id=current_user.get_restaurant_id,
-        product_id=product.id,
-        quantity_wasted=quantity,
-        cost_lost=cost_lost
-    )
-    db.session.add(waste_entry)
+    # Aggiorniamo la giacenza ufficiale con quella reale contata
+    product.quantity = actual_quantity
     db.session.commit()
 
-    flash(f"♻️ Spreco registrato: hai scaricato {quantity} {product.unit} di {product.name}. Costo perso: {round(cost_lost, 2)} €")
     return redirect(url_for('main.inventory'))
 
 @main.route('/suppliers')
@@ -349,7 +357,6 @@ def analytics():
     sup_labels = list(supplier_value.keys())
     sup_values = [round(v, 2) for v in supplier_value.values()]
 
-    # ---> FASE 34: CALCOLO DENARO SPRECATO <---
     wastes = WasteLog.query.filter_by(user_id=current_user.id).all()
     total_waste_cost = sum([w.cost_lost for w in wastes])
 
@@ -360,7 +367,7 @@ def analytics():
                            top_values=top_values,
                            sup_labels=sup_labels,
                            sup_values=sup_values,
-                           total_waste=round(total_waste_cost, 2)) # Passato al template
+                           total_waste=round(total_waste_cost, 2))
 
 @main.route('/profile')
 @login_required
