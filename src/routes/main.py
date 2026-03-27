@@ -13,11 +13,9 @@ import google.generativeai as genai
 
 main = Blueprint('main', __name__)
 
-# ---> FASE 32: IL BUTTAFUORI (BLOCCO ACCESSO) <---
 @main.before_request
 def check_password_change():
     if current_user.is_authenticated:
-        # Se l'utente deve cambiare password e non è già sulla pagina di cambio o di logout, bloccalo!
         if current_user.must_change_password and request.endpoint not in ['auth.change_password', 'auth.logout', 'static']:
             return redirect(url_for('auth.change_password'))
 
@@ -282,11 +280,12 @@ def sell_item(item_id):
     flash("Scontrino registrato! Magazzino e log aggiornati.")
     return redirect(url_for('main.menu'))
 
-# ECCO LA ROTTA ANALYTICS CHE MANCAVA!
+# ---> FASE 33: REPORTISTICA AVANZATA <---
 @main.route('/analytics')
 @login_required
 @owner_required
 def analytics():
+    # 1. Calcolo Consumi e Best Sellers
     logs = ConsumptionLog.query.filter_by(user_id=current_user.id).all()
     total_cost_consumed = 0
     product_stats = {}
@@ -299,7 +298,34 @@ def analytics():
         else:
             product_stats[log.product.name] = log.quantity_used
 
-    return render_template('analytics.html', total_cost=round(total_cost_consumed, 2), total_orders=len(logs), labels=list(product_stats.keys()), values=list(product_stats.values()))
+    # Ordiniamo i prodotti dal più consumato al meno consumato e prendiamo solo i primi 5
+    sorted_stats = sorted(product_stats.items(), key=lambda x: x[1], reverse=True)[:5]
+    top_labels = [x[0] for x in sorted_stats]
+    top_values = [x[1] for x in sorted_stats]
+
+    # 2. Calcolo Valore Magazzino per Fornitore (Grafico a Torta)
+    products = Product.query.filter_by(user_id=current_user.id).all()
+    supplier_value = {}
+    
+    for p in products:
+        val = p.quantity * p.unit_cost
+        sup_name = p.supplier.name if p.supplier else "Senza Fornitore"
+        
+        if sup_name in supplier_value:
+            supplier_value[sup_name] += val
+        else:
+            supplier_value[sup_name] = val
+            
+    sup_labels = list(supplier_value.keys())
+    sup_values = [round(v, 2) for v in supplier_value.values()]
+
+    return render_template('analytics.html', 
+                           total_cost=round(total_cost_consumed, 2), 
+                           total_orders=len(logs), 
+                           top_labels=top_labels, 
+                           top_values=top_values,
+                           sup_labels=sup_labels,
+                           sup_values=sup_values)
 
 @main.route('/profile')
 @login_required
@@ -343,14 +369,13 @@ def settings():
     staff_members = User.query.filter_by(parent_id=current_user.id).all()
     return render_template('settings.html', staff=staff_members)
 
-# ---> FASE 32: MARCHIATURA DEL DIPENDENTE <---
 @main.route('/add_staff', methods=['POST'])
 @login_required
 @owner_required
 def add_staff():
     full_name = request.form.get('full_name')
     email = request.form.get('email')
-    password = request.form.get('password') # Questa ora è solo temporanea!
+    password = request.form.get('password')
     
     if User.query.filter_by(email=email).first():
         flash("❌ Errore: Questa email è già in uso.")
@@ -358,8 +383,6 @@ def add_staff():
         
     new_staff = User(email=email, full_name=full_name, role='staff', parent_id=current_user.id)
     new_staff.set_password(password)
-    
-    # Ecco la trappola: obblighiamo il dipendente a cambiarla!
     new_staff.must_change_password = True 
     
     db.session.add(new_staff)
