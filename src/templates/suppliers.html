@@ -6,108 +6,198 @@
     <title>FoodLoop - Fornitori e Ordini</title>
     <link rel="icon" href="{{ url_for('static', filename='logo.png') }}" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        :root { --primary: #10b981; --primary-dark: #059669; --bg-color: #f8fafc; --card-bg: #ffffff; --text-main: #1e293b; --text-muted: #64748b; }
-        body { font-family: 'Inter', sans-serif; margin: 0; background-color: var(--bg-color); color: var(--text-main); padding-top: 80px; }
-
-        .navbar { position: fixed; top: 0; left: 0; right: 0; height: 80px; background: #ffffff; box-shadow: 0 2px 15px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between; padding: 0 50px; z-index: 1000; }
-        .logo-container { display: flex; align-items: center; height: 100%; }
-        .logo-img { height: 50px; width: auto; mix-blend-mode: multiply; }
+        :root { 
+            --primary: #10b981; 
+            --primary-dark: #059669; 
+            --sidebar-bg: #ffffff;
+            --bg-color: #f8fafc; 
+            --card-bg: #ffffff; 
+            --text-main: #0f172a; 
+            --text-muted: #64748b; 
+            --border-light: #e2e8f0;
+        }
         
-        .nav-links { display: flex; gap: 20px; align-items: center; }
-        .nav-item { color: var(--text-muted); text-decoration: none; font-weight: 600; padding: 10px 18px; border-radius: 8px; transition: all 0.2s; font-size: 15px; }
-        .nav-item:hover, .nav-item.active { background: #f1f5f9; color: var(--primary); }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            margin: 0; 
+            background-color: var(--bg-color); 
+            color: var(--text-main); 
+            display: flex;
+            min-height: 100vh;
+        }
 
-        .user-menu { position: relative; display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 6px 10px; border-radius: 12px; transition: background 0.2s; border: 1px solid transparent;}
-        .user-menu:hover { background: #f8fafc; border-color: #e2e8f0; }
-        .user-details { display: flex; flex-direction: column; text-align: right; }
-        .res-name { font-weight: 700; font-size: 14px; color: var(--text-main); line-height: 1.2;}
-        .user-name { font-size: 12px; color: var(--text-muted); }
-        .avatar { width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);}
+        /* SIDEBAR COERENTE */
+        .sidebar {
+            width: 260px; background-color: var(--sidebar-bg); position: fixed;
+            height: 100vh; left: 0; top: 0; border-right: 1px solid var(--border-light);
+            display: flex; flex-direction: column; padding: 24px 20px;
+            box-sizing: border-box; z-index: 1000;
+        }
 
-        .user-menu::after { content: ''; position: absolute; top: 100%; left: 0; width: 100%; height: 15px; background: transparent; }
-        .dropdown-content { display: none; position: absolute; top: calc(100% + 10px); right: 0; background-color: white; min-width: 220px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); border-radius: 12px; overflow: hidden; z-index: 1001; border: 1px solid #e2e8f0; }
-        .user-menu:hover .dropdown-content { display: block; }
-        
-        .dropdown-content a { color: var(--text-main); padding: 14px 20px; text-decoration: none; display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; transition: 0.2s; }
-        .dropdown-content a:hover { background-color: #f8fafc; color: var(--primary); }
-        .logout-link { color: #ef4444 !important; border-top: 1px solid #f1f5f9; }
-        .logout-link:hover { background-color: #fef2f2 !important; color: #dc2626 !important; }
+        .logo-container { margin-bottom: 40px; padding: 0 10px; }
+        .logo-img { height: 40px; width: auto; }
 
-        .content { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
-        .header { margin-bottom: 30px; }
-        .header h1 { margin: 0; font-size: 32px; color: var(--text-main); font-weight: 800; letter-spacing: -0.5px; }
-        .header p { margin: 8px 0 0 0; color: var(--text-muted); font-size: 16px; }
+        .nav-menu { display: flex; flex-direction: column; gap: 8px; flex-grow: 1; }
 
-        /* Struttura a griglia per dividere Fornitori e Ordini */
-        .layout-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+        .nav-item {
+            display: flex; align-items: center; gap: 12px;
+            color: var(--text-muted); text-decoration: none;
+            font-weight: 600; padding: 12px 16px;
+            border-radius: 10px; transition: all 0.2s ease; font-size: 14px;
+        }
+        .nav-item i { width: 20px; height: 20px; }
+        .nav-item:hover { background-color: #f1f5f9; color: var(--text-main); }
+        .nav-item.active { background-color: var(--primary); color: white; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2); }
+
+        .bottom-nav { border-top: 1px solid var(--border-light); padding-top: 20px; display: flex; flex-direction: column; gap: 8px; }
+
+        /* AREA CENTRALE */
+        .main-content {
+            margin-left: 260px; padding: 40px 50px;
+            flex-grow: 1; width: calc(100% - 260px); box-sizing: border-box;
+        }
+
+        .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px; }
+        .header h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+        .header p { margin: 6px 0 0 0; color: var(--text-muted); font-size: 15px; }
+
+        .user-profile {
+            display: flex; align-items: center; gap: 12px;
+            background: white; padding: 6px 16px 6px 6px;
+            border-radius: 50px; border: 1px solid var(--border-light);
+        }
+        .avatar {
+            width: 32px; height: 32px; border-radius: 50%;
+            background: var(--text-main); color: white; 
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 600; font-size: 14px;
+        }
+
+        /* LAYOUT GRIGLIA */
+        .layout-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
         @media (max-width: 900px) { .layout-grid { grid-template-columns: 1fr; } }
 
-        .card { background: var(--card-bg); padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.03); margin-bottom: 30px; border: 1px solid #f1f5f9; }
-        .card h3 { margin-top: 0; color: var(--text-main); font-size: 18px; margin-bottom: 20px; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px;}
+        /* CARDS */
+        .card { 
+            background: var(--card-bg); padding: 24px; border-radius: 16px; 
+            border: 1px solid var(--border-light); margin-bottom: 24px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+        .card-header h3 { margin: 0; font-size: 16px; color: var(--text-main); }
 
+        /* FORM */
         .form-row { display: flex; gap: 15px; margin-bottom: 15px; flex-direction: column;}
-        input { width: 100%; padding: 14px 15px; border: 2px solid #e2e8f0; border-radius: 12px; font-family: 'Inter', sans-serif; font-size: 15px; outline: none; transition: all 0.3s; box-sizing: border-box; background: #f8fafc; }
-        input:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1); }
+        input { 
+            width: 100%; padding: 12px 16px; border: 1px solid var(--border-light); 
+            border-radius: 10px; font-family: 'Inter', sans-serif; font-size: 14px; 
+            outline: none; transition: all 0.2s; box-sizing: border-box; background: #f8fafc; 
+        }
+        input:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); }
         
-        .btn { width: 100%; padding: 14px 20px; border: none; border-radius: 12px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600; color: white; transition: all 0.3s; background-color: var(--text-main); }
-        .btn:hover { background-color: black; transform: translateY(-2px); box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2); }
+        .btn-primary { 
+            width: 100%; padding: 12px 20px; border: none; border-radius: 10px; cursor: pointer; 
+            font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; 
+            color: white; background-color: var(--text-main); 
+            display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s;
+        }
+        .btn-primary:hover { background-color: black; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         
+        /* LISTA FORNITORI */
         .supplier-list { list-style: none; padding: 0; margin: 0; }
-        .supplier-item { padding: 15px; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 10px; background: #f8fafc; }
-        .supplier-item strong { display: block; font-size: 16px; margin-bottom: 5px; color: var(--text-main);}
-        .supplier-item span { font-size: 14px; color: var(--text-muted); }
+        .supplier-item { 
+            padding: 16px; border: 1px solid var(--border-light); border-radius: 12px; 
+            margin-bottom: 12px; background: #f8fafc; display: flex; align-items: flex-start; gap: 12px;
+        }
+        .supplier-icon {
+            width: 36px; height: 36px; border-radius: 8px; background: white; border: 1px solid var(--border-light);
+            display: flex; align-items: center; justify-content: center; color: var(--text-muted);
+        }
+        .supplier-info strong { display: block; font-size: 14px; margin-bottom: 4px; color: var(--text-main);}
+        .supplier-info span { font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 6px;}
 
-        /* Stile Card Ordini */
-        .order-card { padding: 20px; border: 1px solid #e2e8f0; border-radius: 15px; margin-bottom: 15px; background: white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-        .order-card h4 { margin: 0 0 10px 0; color: var(--primary-dark); font-size: 16px; }
-        .order-list { font-family: monospace; font-size: 14px; background: #f1f5f9; padding: 15px; border-radius: 8px; margin-bottom: 15px; line-height: 1.6; }
-        .btn-wa { background-color: #25D366; color: white; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .btn-wa:hover { background-color: #128C7E; }
+        /* CARD ORDINI (LISTA DELLA SPESA) */
+        .order-card { 
+            padding: 20px; border: 1px solid var(--border-light); border-radius: 12px; 
+            margin-bottom: 16px; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.02); 
+        }
+        .order-card h4 { margin: 0 0 12px 0; color: var(--primary-dark); font-size: 15px; display: flex; align-items: center; gap: 8px;}
+        .order-list { 
+            font-family: 'Inter', monospace; font-size: 13px; background: #f8fafc; 
+            padding: 16px; border-radius: 8px; margin-bottom: 16px; line-height: 1.6; border: 1px solid var(--border-light);
+        }
+        
+        .btn-wa { 
+            background-color: #25D366; color: white; display: flex; align-items: center; justify-content: center; gap: 8px; 
+            width: 100%; padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; transition: 0.2s;
+        }
+        .btn-wa:hover { background-color: #16a34a; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(37, 211, 102, 0.2); }
 
-        .flash-msg { padding: 16px; margin-bottom: 25px; border-radius: 12px; font-weight: 500; display: flex; align-items: center; gap: 10px; background-color: #f0fdf4; color: #16a34a; border-left: 4px solid #16a34a; }
-        .empty-state { text-align: center; color: var(--text-muted); padding: 30px 10px; font-size: 15px; }
+        .flash-msg { padding: 16px; margin-bottom: 24px; border-radius: 10px; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 10px; background-color: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+        .empty-state { text-align: center; color: var(--text-muted); padding: 40px 20px; font-size: 14px; display: flex; flex-direction: column; align-items: center; gap: 12px;}
     </style>
 </head>
 <body>
-    <div class="navbar">
+
+    <div class="sidebar">
         <div class="logo-container">
-            <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="logo-img" onerror="this.style.display='none';">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="FoodLoop" class="logo-img" onerror="this.style.display='none';">
         </div>
         
-        <div class="nav-links">
-            <a href="{{ url_for('main.dashboard') }}" class="nav-item">Dashboard</a>
-            <a href="{{ url_for('main.inventory') }}" class="nav-item">Magazzino</a>
-            <a href="{{ url_for('main.menu') }}" class="nav-item">Gestione Menù</a>
-            <a href="{{ url_for('main.suppliers') }}" class="nav-item active">Fornitori</a>
-            
-            <div class="user-menu">
-                <div class="user-details">
-                    <span class="res-name">{{ current_user.get_restaurant_name }}</span>
-                    <span class="user-name">{{ current_user.full_name }} (Admin)</span>
-                </div>
-                <div class="avatar">{{ current_user.full_name[0] | upper }}</div>
-                
-                <div class="dropdown-content">
-                    <a href="{{ url_for('main.analytics') }}">📈 FoodLoop Intelligence</a>
-                    <a href="{{ url_for('main.profile') }}">👤 Profilo & Esportazioni</a>
-                    <a href="{{ url_for('main.settings') }}">⚙️ Impostazioni Staff</a>
-                    <a href="{{ url_for('auth.logout') }}" class="logout-link">🚪 Esci dall'account</a>
-                </div>
-            </div>
+        <div class="nav-menu">
+            <a href="{{ url_for('main.dashboard') }}" class="nav-item">
+                <i data-lucide="layout-dashboard"></i> Overview
+            </a>
+            <a href="{{ url_for('main.inventory') }}" class="nav-item">
+                <i data-lucide="package"></i> Inventory
+            </a>
+            <a href="{{ url_for('main.menu') }}" class="nav-item">
+                <i data-lucide="book-open"></i> Menu Planner
+            </a>
+            <a href="{{ url_for('main.suppliers') }}" class="nav-item active">
+                <i data-lucide="shopping-cart"></i> Shopping & Suppliers
+            </a>
+        </div>
+
+        <div class="bottom-nav">
+            {% if current_user.role == 'owner' %}
+                <a href="{{ url_for('main.analytics') }}" class="nav-item">
+                    <i data-lucide="pie-chart"></i> Reports & Analysis
+                </a>
+                <a href="{{ url_for('main.profile') }}" class="nav-item">
+                    <i data-lucide="user"></i> Account
+                </a>
+                <a href="{{ url_for('main.settings') }}" class="nav-item">
+                    <i data-lucide="settings"></i> Settings
+                </a>
+            {% endif %}
+            <a href="{{ url_for('auth.logout') }}" class="nav-item" style="color: #ef4444;">
+                <i data-lucide="log-out"></i> Logout
+            </a>
         </div>
     </div>
-    
-    <div class="content">
+
+    <div class="main-content">
         <div class="header">
-            <h1>Fornitori e Ordini 🚚</h1>
-            <p>Gestisci la rubrica e genera automaticamente le liste della spesa per i prodotti sotto scorta.</p>
+            <div>
+                <h1>Shopping & Suppliers</h1>
+                <p>Gestisci la rubrica e genera automaticamente le liste della spesa.</p>
+            </div>
+            <div class="user-profile">
+                <div class="avatar">{{ current_user.full_name[0] | upper }}</div>
+                <div style="display: flex; flex-direction: column;">
+                    <span style="font-weight: 600; font-size: 13px;">{{ current_user.full_name }}</span>
+                    <span style="font-size: 11px; color: var(--text-muted);">{{ current_user.get_restaurant_name }}</span>
+                </div>
+            </div>
         </div>
 
         {% with messages = get_flashed_messages() %}
           {% if messages %}
             {% for message in messages %}
-              <div class="flash-msg">{{ message }}</div>
+              <div class="flash-msg"><i data-lucide="check-circle-2"></i> {{ message }}</div>
             {% endfor %}
           {% endif %}
         {% endwith %}
@@ -115,26 +205,42 @@
         <div class="layout-grid">
             <div>
                 <div class="card">
-                    <h3>➕ Aggiungi Fornitore</h3>
+                    <div class="card-header">
+                        <i data-lucide="user-plus" style="color: var(--text-main);"></i>
+                        <h3>Add New Supplier</h3>
+                    </div>
                     <form action="{{ url_for('main.add_supplier') }}" method="POST">
                         <div class="form-row">
                             <input type="text" name="name" placeholder="Nome Azienda (es. Rossi Carni)" required>
                             <input type="text" name="contact" placeholder="Email o Telefono" required>
                         </div>
-                        <button type="submit" class="btn">Salva in Rubrica</button>
+                        <button type="submit" class="btn-primary">
+                            <i data-lucide="save" style="width: 18px;"></i> Salva in Rubrica
+                        </button>
                     </form>
                 </div>
 
                 <div class="card">
-                    <h3>📋 Rubrica</h3>
+                    <div class="card-header">
+                        <i data-lucide="contact" style="color: var(--text-main);"></i>
+                        <h3>Rubrica Contatti</h3>
+                    </div>
                     <ul class="supplier-list">
                         {% for s in suppliers %}
                         <li class="supplier-item">
-                            <strong>{{ s.name }}</strong>
-                            <span>{{ s.contact_info }}</span>
+                            <div class="supplier-icon">
+                                <i data-lucide="truck" style="width: 18px;"></i>
+                            </div>
+                            <div class="supplier-info">
+                                <strong>{{ s.name }}</strong>
+                                <span><i data-lucide="phone" style="width: 12px;"></i> {{ s.contact_info }}</span>
+                            </div>
                         </li>
                         {% else %}
-                        <div class="empty-state">Nessun fornitore salvato.</div>
+                        <div class="empty-state">
+                            <i data-lucide="users" style="width: 32px; height: 32px; color: #cbd5e1;"></i>
+                            Nessun fornitore in rubrica.
+                        </div>
                         {% endfor %}
                     </ul>
                 </div>
@@ -142,29 +248,34 @@
 
             <div>
                 <div class="card">
-                    <h3>🛒 Liste della Spesa Automatiche</h3>
-                    <p style="font-size: 14px; color: var(--text-muted); margin-top: -10px; margin-bottom: 20px;">
-                        Generato in base ai prodotti scesi sotto la soglia minima di sicurezza.
+                    <div class="card-header">
+                        <i data-lucide="shopping-bag" style="color: var(--primary);"></i>
+                        <h3>Liste Spesa Automatiche</h3>
+                    </div>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-top: -10px; margin-bottom: 20px;">
+                        Ordini generati in base ai prodotti scesi sotto la soglia di sicurezza.
                     </p>
 
                     {% if auto_orders %}
                         {% for sup_name, data in auto_orders.items() %}
                         <div class="order-card">
-                            <h4>Da ordinare da: {{ sup_name }}</h4>
+                            <h4><i data-lucide="package" style="width: 16px;"></i> Ordine per: {{ sup_name }}</h4>
                             <div class="order-list">
-                                {% for item in data['items'] %}
+                                {% for item in data['items_list'] %}
                                     • {{ item.suggested }} {{ item.unit }} di {{ item.name }}<br>
                                 {% endfor %}
                             </div>
                             
-                            <button class="btn btn-wa" id="btn-{{ loop.index }}" onclick='copyToClipboard({{ data.wa_text|tojson|safe }}, "btn-{{ loop.index }}")'>
-                                Copia Testo per WhatsApp
+                            <button class="btn-wa" id="btn-{{ loop.index }}" onclick='copyToClipboard({{ data.wa_text|tojson|safe }}, "btn-{{ loop.index }}")'>
+                                <i data-lucide="message-circle" style="width: 18px;"></i> Copia per WhatsApp
                             </button>
                         </div>
                         {% endfor %}
                     {% else %}
-                        <div class="empty-state" style="background: #f0fdf4; border: 1px dashed #22c55e; border-radius: 12px; color: #15803d;">
-                            🎉 Tutto perfetto! Nessun prodotto sotto scorta.
+                        <div class="empty-state" style="background: #f0fdf4; border: 1px dashed #22c55e; border-radius: 12px; color: #15803d; padding: 30px;">
+                            <i data-lucide="check-circle" style="width: 32px; height: 32px;"></i>
+                            <span style="font-weight: 600;">Tutto sotto controllo!</span>
+                            <span>Non ci sono ordini urgenti da effettuare.</span>
                         </div>
                     {% endif %}
                 </div>
@@ -173,18 +284,22 @@
     </div>
 
     <script>
+        lucide.createIcons();
+
         function copyToClipboard(text, btnId) {
             navigator.clipboard.writeText(text).then(function() {
                 var btn = document.getElementById(btnId);
-                var originalText = btn.innerText;
-                btn.innerText = "✅ Testo Copiato!";
-                btn.style.backgroundColor = "#15803d";
+                var originalHtml = btn.innerHTML;
+                btn.innerHTML = '<i data-lucide="check" style="width: 18px;"></i> Copiato!';
+                lucide.createIcons(); // Ricarica la nuova icona
+                btn.style.backgroundColor = "#16a34a"; // Verde più scuro
                 setTimeout(function() {
-                    btn.innerText = originalText;
+                    btn.innerHTML = originalHtml;
+                    lucide.createIcons();
                     btn.style.backgroundColor = "";
                 }, 2000);
             }).catch(function(err) {
-                alert("Errore durante la copia. Riprova.");
+                alert("Errore durante la copia.");
             });
         }
     </script>
