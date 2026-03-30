@@ -10,6 +10,8 @@ import os
 import uuid
 import json
 import google.generativeai as genai
+import urllib.parse
+import requests
 
 main = Blueprint('main', __name__)
 
@@ -360,47 +362,49 @@ def sell_item(item_id):
 @owner_required
 def analytics():
     logs = ConsumptionLog.query.filter_by(user_id=current_user.id).all()
-    total_cost_consumed = 0
-    product_stats = {}
+    products = Product.query.filter_by(user_id=current_user.id).all()
+    wastes = WasteLog.query.filter_by(user_id=current_user.id).all()
     
-    for log in logs:
-        cost = log.quantity_used * log.product.unit_cost
-        total_cost_consumed += cost
-        if log.product.name in product_stats:
-            product_stats[log.product.name] += log.quantity_used
-        else:
-            product_stats[log.product.name] = log.quantity_used
+    # 1. Metriche Base
+    total_cost_consumed = sum([log.quantity_used * log.product.unit_cost for log in logs])
+    total_waste_cost = sum([w.cost_lost for w in wastes])
 
+    # 2. Dati Grafico 1: Top 5 Consumi (Barre)
+    product_stats = {}
+    for log in logs:
+        product_stats[log.product.name] = product_stats.get(log.product.name, 0) + log.quantity_used
     sorted_stats = sorted(product_stats.items(), key=lambda x: x[1], reverse=True)[:5]
     top_labels = [x[0] for x in sorted_stats]
     top_values = [x[1] for x in sorted_stats]
 
-    products = Product.query.filter_by(user_id=current_user.id).all()
+    # 3. Dati Grafico 2: Valore per Fornitore (Torta)
     supplier_value = {}
-    
     for p in products:
         val = p.quantity * p.unit_cost
         sup_name = p.supplier.name if p.supplier else "Senza Fornitore"
-        
-        if sup_name in supplier_value:
-            supplier_value[sup_name] += val
-        else:
-            supplier_value[sup_name] = val
-            
+        supplier_value[sup_name] = supplier_value.get(sup_name, 0) + val
     sup_labels = list(supplier_value.keys())
     sup_values = [round(v, 2) for v in supplier_value.values()]
 
-    wastes = WasteLog.query.filter_by(user_id=current_user.id).all()
-    total_waste_cost = sum([w.cost_lost for w in wastes])
+    # 4. Dati Grafico 3: Trend Consumi nel tempo (Linea)
+    # Raggruppiamo le ultime 10 operazioni per ID (simulando il tempo)
+    recent_logs = ConsumptionLog.query.filter_by(user_id=current_user.id).order_by(ConsumptionLog.id.desc()).limit(15).all()
+    trend_labels = [f"Op #{l.id}" for l in reversed(recent_logs)]
+    trend_values = [l.quantity_used for l in reversed(recent_logs)]
+
+    # 5. Dati Grafico 4: Salute del Magazzino (Ciambella)
+    good_stock = len([p for p in products if p.quantity > p.min_threshold])
+    low_stock = len([p for p in products if p.quantity > 0 and p.quantity <= p.min_threshold])
+    out_stock = len([p for p in products if p.quantity == 0])
+    health_labels = ["In Salute", "Sotto Scorta", "Esauriti"]
+    health_values = [good_stock, low_stock, out_stock]
 
     return render_template('analytics.html', 
-                           total_cost=round(total_cost_consumed, 2), 
-                           total_orders=len(logs), 
-                           top_labels=top_labels, 
-                           top_values=top_values,
-                           sup_labels=sup_labels,
-                           sup_values=sup_values,
-                           total_waste=round(total_waste_cost, 2))
+                           total_cost=round(total_cost_consumed, 2), total_orders=len(logs), total_waste=round(total_waste_cost, 2),
+                           top_labels=top_labels, top_values=top_values,
+                           sup_labels=sup_labels, sup_values=sup_values,
+                           trend_labels=trend_labels, trend_values=trend_values,
+                           health_labels=health_labels, health_values=health_values)
 
 @main.route('/profile')
 @login_required
@@ -464,3 +468,45 @@ def add_staff():
     db.session.commit()
     flash(f"✅ Account creato! Comunica a {full_name} la password temporanea: dovrà cambiarla al primo accesso.")
     return redirect(url_for('main.settings'))
+
+@main.route('/update_avatar', methods=['POST'])
+@login_required
+def update_avatar():
+    avatar_type = request.form.get('avatar_type')
+    
+    if avatar_type == 'file':
+        if 'avatar_file' in request.files and request.files['avatar_file'].filename != '':
+            pic = request.files['avatar_file']
+            filename = secure_filename(pic.filename)
+            unique_name = str(uuid.uuid4().hex) + "_" + filename
+            upload_folder = os.path.join(current_app.root_path, 'static', 'avatars')
+            os.makedirs(upload_folder, exist_ok=True)
+            pic.save(os.path.join(upload_folder, unique_name))
+            current_user.profile_image = unique_name
+            db.session.commit()
+            flash("Foto profilo personalizzata caricata! 📸")
+        else:
+            flash("Nessuna foto selezionata.")
+            
+    elif avatar_type in ['robot', 'human']:
+        # Genera un avatar unico basato sul nome
+        safe_name = urllib.parse.quote(current_user.full_name)
+        style = "bottts" if avatar_type == 'robot' else "avataaars"
+        url = f"https://api.dicebear.com/7.x/{style}/svg?seed={safe_name}&backgroundColor=e2e8f0"
+        
+        try:
+            # Scarica l'immagine e salvala nel magazzino di FoodLoop
+            response = requests.get(url)
+            if response.status_code == 200:
+                unique_name = f"avatar_{current_user.id}_{avatar_type}.svg"
+                upload_folder = os.path.join(current_app.root_path, 'static', 'avatars')
+                os.makedirs(upload_folder, exist_ok=True)
+                with open(os.path.join(upload_folder, unique_name), 'wb') as f:
+                    f.write(response.content)
+                current_user.profile_image = unique_name
+                db.session.commit()
+                flash(f"Avatar generato e salvato con successo! 🎨")
+        except Exception as e:
+            flash("Errore durante la generazione dell'avatar.")
+
+    return redirect(url_for('main.profile'))

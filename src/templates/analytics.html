@@ -9,28 +9,30 @@
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --primary: #10b981; --primary-dark: #059669; --sidebar-bg: #ffffff; --bg-color: #f8fafc; --card-bg: #ffffff; --text-main: #0f172a; --text-muted: #64748b; --border-light: #e2e8f0; }
+        :root { --primary: #10b981; --sidebar-bg: #ffffff; --bg-color: #f8fafc; --card-bg: #ffffff; --text-main: #0f172a; --text-muted: #64748b; --border-light: #e2e8f0; }
         body { font-family: 'Inter', sans-serif; margin: 0; background-color: var(--bg-color); color: var(--text-main); display: flex; min-height: 100vh; }
-        .sidebar { width: 260px; background-color: var(--sidebar-bg); position: fixed; height: 100vh; left: 0; top: 0; border-right: 1px solid var(--border-light); display: flex; flex-direction: column; padding: 24px 20px; box-sizing: border-box; z-index: 1000; }
         
-        /* NUOVO BRAND HEADER */
-        .logo-container { display: flex; align-items: center; gap: 12px; margin-bottom: 40px; padding: 0 10px; }
+        /* SIDEBAR CON SEZIONI */
+        .sidebar { width: 260px; background-color: var(--sidebar-bg); position: fixed; height: 100vh; left: 0; top: 0; border-right: 1px solid var(--border-light); display: flex; flex-direction: column; padding: 24px 20px; box-sizing: border-box; z-index: 1000; overflow-y: auto;}
+        .logo-container { display: flex; align-items: center; gap: 12px; margin-bottom: 30px; padding: 0 10px; }
         .logo-img { height: 42px; width: 42px; border-radius: 12px; box-shadow: 0 4px 10px rgba(22, 163, 74, 0.2); }
         .brand-name { font-size: 22px; font-weight: 800; color: var(--text-main); letter-spacing: -0.5px; }
-        
-        .nav-menu { display: flex; flex-direction: column; gap: 8px; flex-grow: 1; }
-        .nav-item { display: flex; align-items: center; gap: 12px; color: var(--text-muted); text-decoration: none; font-weight: 600; padding: 12px 16px; border-radius: 10px; transition: all 0.2s ease; font-size: 14px; }
-        .nav-item i { width: 20px; height: 20px; }
+        .nav-section { display: block; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin: 20px 0 8px 10px; letter-spacing: 0.8px; }
+        .nav-menu { display: flex; flex-direction: column; gap: 4px; flex-grow: 1; }
+        .nav-item { display: flex; align-items: center; gap: 12px; color: var(--text-muted); text-decoration: none; font-weight: 600; padding: 10px 16px; border-radius: 10px; transition: all 0.2s ease; font-size: 14px; }
+        .nav-item i { width: 18px; height: 18px; }
         .nav-item:hover { background-color: #f1f5f9; color: var(--text-main); }
         .nav-item.active { background-color: var(--primary); color: white; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2); }
-        .nav-item.bottom-active { background-color: #f1f5f9; color: var(--primary); }
-        .bottom-nav { border-top: 1px solid var(--border-light); padding-top: 20px; display: flex; flex-direction: column; gap: 8px; }
+        .bottom-nav { border-top: 1px solid var(--border-light); padding-top: 10px; margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+
         .main-content { margin-left: 260px; padding: 40px 50px; flex-grow: 1; width: calc(100% - 260px); box-sizing: border-box; }
         .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px; }
         .header h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
         .header p { margin: 6px 0 0 0; color: var(--text-muted); font-size: 15px; }
+        
         .user-profile { display: flex; align-items: center; gap: 12px; background: white; padding: 6px 16px 6px 6px; border-radius: 50px; border: 1px solid var(--border-light); }
-        .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--text-main); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; }
+        .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--text-main); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; object-fit: cover;}
+
         .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 30px; }
         .stat-card { padding: 24px; border-radius: 16px; color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between; }
         .card-blue { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
@@ -39,7 +41,8 @@
         .stat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; opacity: 0.9;}
         .stat-header h3 { margin: 0; font-size: 14px; font-weight: 500; }
         .stat-value { font-size: 32px; font-weight: 700; margin: 0; letter-spacing: -0.5px; }
-        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+
+        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
         .card { background: var(--card-bg); padding: 24px; border-radius: 16px; border: 1px solid var(--border-light); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .card-header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .card-header-flex h3 { margin: 0; font-size: 16px; color: var(--text-main); }
@@ -48,6 +51,7 @@
     </style>
 </head>
 <body>
+
     <div class="sidebar">
         <div class="logo-container">
             <img src="{{ url_for('static', filename='logo.png') }}?v=2" alt="FoodLoop" class="logo-img">
@@ -55,18 +59,24 @@
         </div>
         
         <div class="nav-menu">
+            <span class="nav-section">Core</span>
             <a href="{{ url_for('main.dashboard') }}" class="nav-item"><i data-lucide="layout-dashboard"></i> Overview</a>
-            <a href="{{ url_for('main.inventory') }}" class="nav-item"><i data-lucide="package"></i> Inventory</a>
+            <a href="{{ url_for('main.inventory') }}" class="nav-item"><i data-lucide="package"></i> Magazzino</a>
+            
+            <span class="nav-section">Operatività</span>
             <a href="{{ url_for('main.menu') }}" class="nav-item"><i data-lucide="book-open"></i> Menu Planner</a>
-            <a href="{{ url_for('main.suppliers') }}" class="nav-item"><i data-lucide="shopping-cart"></i> Shopping & Suppliers</a>
+            <a href="{{ url_for('main.suppliers') }}" class="nav-item"><i data-lucide="shopping-cart"></i> Fornitori & Ordini</a>
         </div>
+
         <div class="bottom-nav">
-            {% if current_user.role == 'owner' %}
-                <a href="{{ url_for('main.analytics') }}" class="nav-item bottom-active"><i data-lucide="pie-chart"></i> Reports & Analysis</a>
-                <a href="{{ url_for('main.profile') }}" class="nav-item"><i data-lucide="user"></i> Account</a>
-                <a href="{{ url_for('main.settings') }}" class="nav-item"><i data-lucide="settings"></i> Settings</a>
-            {% endif %}
-            <a href="{{ url_for('auth.logout') }}" class="nav-item" style="color: #ef4444;"><i data-lucide="log-out"></i> Logout</a>
+            <span class="nav-section">Business</span>
+            <a href="{{ url_for('main.analytics') }}" class="nav-item active"><i data-lucide="pie-chart"></i> Reports & Analysis</a>
+            
+            <span class="nav-section">Impostazioni</span>
+            <a href="{{ url_for('main.profile') }}" class="nav-item"><i data-lucide="user"></i> Account</a>
+            <a href="{{ url_for('main.settings') }}" class="nav-item"><i data-lucide="settings"></i> Gestione Team</a>
+            
+            <a href="{{ url_for('auth.logout') }}" class="nav-item" style="color: #ef4444; margin-top: 10px;"><i data-lucide="log-out"></i> Logout</a>
         </div>
     </div>
 
@@ -74,10 +84,14 @@
         <div class="header">
             <div>
                 <h1>Reports & Analysis</h1>
-                <p>Il centro di controllo per analizzare consumi, sprechi e distribuzione del valore.</p>
+                <p>Dashboard avanzata per l'analisi di consumi, sprechi e performance.</p>
             </div>
             <div class="user-profile">
-                <div class="avatar">{{ current_user.full_name[0] | upper }}</div>
+                {% if current_user.profile_image and current_user.profile_image != 'default' %}
+                    <img src="{{ url_for('static', filename='avatars/' + current_user.profile_image) }}" class="avatar" alt="Avatar">
+                {% else %}
+                    <div class="avatar">{{ current_user.full_name[0] | upper }}</div>
+                {% endif %}
                 <div style="display: flex; flex-direction: column;">
                     <span style="font-weight: 600; font-size: 13px;">{{ current_user.full_name }}</span>
                     <span style="font-size: 11px; color: var(--text-muted);">{{ current_user.get_restaurant_name }}</span>
@@ -87,7 +101,7 @@
 
         <div class="stats-grid">
             <div class="stat-card card-blue">
-                <div class="stat-header"><h3>Costo Merci Vendute (Food Cost)</h3><i data-lucide="trending-up" style="width: 20px;"></i></div>
+                <div class="stat-header"><h3>Costo Merci Vendute</h3><i data-lucide="trending-up" style="width: 20px;"></i></div>
                 <p class="stat-value">€ {{ total_cost }}</p>
             </div>
             <div class="stat-card card-red">
@@ -102,42 +116,86 @@
 
         <div class="charts-grid">
             <div class="card">
-                <div class="card-header-flex"><h3>Top 5 Ingredienti più consumati</h3><i data-lucide="bar-chart-2" style="width: 18px; color: var(--text-muted);"></i></div>
+                <div class="card-header-flex"><h3>Trend Recente Operazioni (Linea)</h3><i data-lucide="activity" style="width: 18px; color: var(--text-muted);"></i></div>
                 <div class="chart-container">
-                    {% if top_labels|length > 0 %}
-                        <canvas id="barChart"></canvas>
+                    {% if trend_labels|length > 0 %}
+                        <canvas id="lineChart"></canvas>
                     {% else %}
-                        <div class="empty-state"><i data-lucide="inbox" style="width: 32px; height: 32px; color: #cbd5e1;"></i> Vendi qualche piatto dal Menù per vedere le statistiche di consumo!</div>
+                        <div class="empty-state"><i data-lucide="trending-up" style="width: 32px; height: 32px; color: #cbd5e1;"></i> Registra ordini per generare la linea di tendenza.</div>
                     {% endif %}
                 </div>
             </div>
             <div class="card">
-                <div class="card-header-flex"><h3>Valore Magazzino per Fornitore</h3><i data-lucide="truck" style="width: 18px; color: var(--text-muted);"></i></div>
+                <div class="card-header-flex"><h3>Stato di Salute Magazzino (Ciambella)</h3><i data-lucide="activity" style="width: 18px; color: var(--text-muted);"></i></div>
+                <div class="chart-container">
+                    <canvas id="healthChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-grid">
+            <div class="card">
+                <div class="card-header-flex"><h3>Top 5 Ingredienti (Barre)</h3><i data-lucide="bar-chart-2" style="width: 18px; color: var(--text-muted);"></i></div>
+                <div class="chart-container">
+                    {% if top_labels|length > 0 %}
+                        <canvas id="barChart"></canvas>
+                    {% else %}
+                        <div class="empty-state"><i data-lucide="inbox" style="width: 32px; height: 32px; color: #cbd5e1;"></i> Dati non sufficienti.</div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-header-flex"><h3>Valore per Fornitore (Torta)</h3><i data-lucide="truck" style="width: 18px; color: var(--text-muted);"></i></div>
                 <div class="chart-container">
                     {% if sup_labels|length > 0 %}
                         <canvas id="pieChart"></canvas>
                     {% else %}
-                        <div class="empty-state"><i data-lucide="pie-chart" style="width: 32px; height: 32px; color: #cbd5e1;"></i> Aggiungi prodotti e fornitori al magazzino per visualizzare questo grafico.</div>
+                        <div class="empty-state"><i data-lucide="pie-chart" style="width: 32px; height: 32px; color: #cbd5e1;"></i> Aggiungi prodotti per visualizzare i fornitori.</div>
                     {% endif %}
                 </div>
             </div>
         </div>
     </div>
+
     <script>
         lucide.createIcons();
         document.addEventListener('DOMContentLoaded', function() {
+            
+            // 1. Grafico Linea (Trend)
+            const lineCanvas = document.getElementById('lineChart');
+            if(lineCanvas) {
+                new Chart(lineCanvas.getContext('2d'), {
+                    type: 'line',
+                    data: { labels: {{ trend_labels|tojson|safe }}, datasets: [{ label: 'Q.tà', data: {{ trend_values|tojson|safe }}, borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.1)', fill: true, tension: 0.4 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                });
+            }
+
+            // 2. Grafico Ciambella (Salute Magazzino)
+            const healthCanvas = document.getElementById('healthChart');
+            if(healthCanvas) {
+                new Chart(healthCanvas.getContext('2d'), {
+                    type: 'doughnut',
+                    data: { labels: {{ health_labels|tojson|safe }}, datasets: [{ data: {{ health_values|tojson|safe }}, backgroundColor: ['#10b981', '#f59e0b', '#ef4444'], borderWidth: 0 }] },
+                    options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'bottom' } } }
+                });
+            }
+
+            // 3. Grafico Barre (Top 5)
             const barCanvas = document.getElementById('barChart');
             if(barCanvas) {
                 new Chart(barCanvas.getContext('2d'), {
-                    type: 'bar', data: { labels: {{ top_labels|tojson|safe }}, datasets: [{ label: 'Quantità Consumata', data: {{ top_values|tojson|safe }}, backgroundColor: '#3b82f6', borderRadius: 6 }] },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#f1f5f9' } }, x: { grid: { display: false } } } }
+                    type: 'bar', data: { labels: {{ top_labels|tojson|safe }}, datasets: [{ label: 'Consumo', data: {{ top_values|tojson|safe }}, backgroundColor: '#3b82f6', borderRadius: 6 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
                 });
             }
+
+            // 4. Grafico Torta (Fornitori)
             const pieCanvas = document.getElementById('pieChart');
             if(pieCanvas) {
                 new Chart(pieCanvas.getContext('2d'), {
-                    type: 'doughnut', data: { labels: {{ sup_labels|tojson|safe }}, datasets: [{ data: {{ sup_values|tojson|safe }}, backgroundColor: ['#10b981', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899', '#64748b'], borderWidth: 2, borderColor: '#ffffff' }] },
-                    options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'right', labels: { font: { family: 'Inter', size: 12 } } } } }
+                    type: 'pie', data: { labels: {{ sup_labels|tojson|safe }}, datasets: [{ data: {{ sup_values|tojson|safe }}, backgroundColor: ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#64748b'] }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } }
                 });
             }
         });

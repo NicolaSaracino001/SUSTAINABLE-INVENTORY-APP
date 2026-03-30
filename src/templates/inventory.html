@@ -8,27 +8,30 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        :root { --primary: #10b981; --primary-dark: #059669; --sidebar-bg: #ffffff; --bg-color: #f8fafc; --card-bg: #ffffff; --text-main: #0f172a; --text-muted: #64748b; --border-light: #e2e8f0; }
+        :root { --primary: #10b981; --sidebar-bg: #ffffff; --bg-color: #f8fafc; --card-bg: #ffffff; --text-main: #0f172a; --text-muted: #64748b; --border-light: #e2e8f0; }
         body { font-family: 'Inter', sans-serif; margin: 0; background-color: var(--bg-color); color: var(--text-main); display: flex; min-height: 100vh; }
-        .sidebar { width: 260px; background-color: var(--sidebar-bg); position: fixed; height: 100vh; left: 0; top: 0; border-right: 1px solid var(--border-light); display: flex; flex-direction: column; padding: 24px 20px; box-sizing: border-box; z-index: 1000; }
         
-        /* NUOVO BRAND HEADER */
-        .logo-container { display: flex; align-items: center; gap: 12px; margin-bottom: 40px; padding: 0 10px; }
+        .sidebar { width: 260px; background-color: var(--sidebar-bg); position: fixed; height: 100vh; left: 0; top: 0; border-right: 1px solid var(--border-light); display: flex; flex-direction: column; padding: 24px 20px; box-sizing: border-box; z-index: 1000; overflow-y: auto;}
+        .logo-container { display: flex; align-items: center; gap: 12px; margin-bottom: 30px; padding: 0 10px; }
         .logo-img { height: 42px; width: 42px; border-radius: 12px; box-shadow: 0 4px 10px rgba(22, 163, 74, 0.2); }
         .brand-name { font-size: 22px; font-weight: 800; color: var(--text-main); letter-spacing: -0.5px; }
         
-        .nav-menu { display: flex; flex-direction: column; gap: 8px; flex-grow: 1; }
-        .nav-item { display: flex; align-items: center; gap: 12px; color: var(--text-muted); text-decoration: none; font-weight: 600; padding: 12px 16px; border-radius: 10px; transition: all 0.2s ease; font-size: 14px; }
-        .nav-item i { width: 20px; height: 20px; }
+        .nav-section { display: block; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin: 20px 0 8px 10px; letter-spacing: 0.8px; }
+        .nav-menu { display: flex; flex-direction: column; gap: 4px; flex-grow: 1; }
+        .nav-item { display: flex; align-items: center; gap: 12px; color: var(--text-muted); text-decoration: none; font-weight: 600; padding: 10px 16px; border-radius: 10px; transition: all 0.2s ease; font-size: 14px; }
+        .nav-item i { width: 18px; height: 18px; }
         .nav-item:hover { background-color: #f1f5f9; color: var(--text-main); }
         .nav-item.active { background-color: var(--primary); color: white; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2); }
-        .bottom-nav { border-top: 1px solid var(--border-light); padding-top: 20px; display: flex; flex-direction: column; gap: 8px; }
+        .bottom-nav { border-top: 1px solid var(--border-light); padding-top: 10px; margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+
         .main-content { margin-left: 260px; padding: 40px 50px; flex-grow: 1; width: calc(100% - 260px); box-sizing: border-box; }
         .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px; }
         .header h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
         .header p { margin: 6px 0 0 0; color: var(--text-muted); font-size: 15px; }
+        
         .user-profile { display: flex; align-items: center; gap: 12px; background: white; padding: 6px 16px 6px 6px; border-radius: 50px; border: 1px solid var(--border-light); }
-        .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--text-main); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; }
+        .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--text-main); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; object-fit: cover;}
+
         .card { background: var(--card-bg); padding: 24px; border-radius: 16px; border: 1px solid var(--border-light); margin-bottom: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
         .card-header h3 { margin: 0; font-size: 16px; color: var(--text-main); }
@@ -36,22 +39,17 @@
         input, select { flex: 1; padding: 12px 16px; border: 1px solid var(--border-light); border-radius: 10px; font-family: 'Inter', sans-serif; font-size: 14px; outline: none; transition: all 0.2s; background: #f8fafc; }
         input:focus, select:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); }
         .btn-primary { padding: 12px 20px; border: none; border-radius: 10px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; color: white; background-color: var(--primary); display: flex; align-items: center; gap: 8px; transition: 0.2s; }
-        .btn-primary:hover { background-color: var(--primary-dark); }
         .table-container { width: 100%; overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; text-align: left; }
-        th { padding: 16px; color: var(--text-muted); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border-light); }
+        th { padding: 16px; color: var(--text-muted); font-weight: 600; font-size: 13px; text-transform: uppercase; border-bottom: 1px solid var(--border-light); }
         td { padding: 16px; border-bottom: 1px solid #f1f5f9; font-size: 14px; vertical-align: middle; }
-        tr:hover td { background-color: #f8fafc; }
-        .item-name { font-weight: 600; color: var(--text-main); }
-        .text-sub { color: var(--text-muted); }
         .status-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
         .status-good { background: #dcfce7; color: #166534; }
         .status-low { background: #fef08a; color: #854d0e; }
         .status-danger { background: #fee2e2; color: #991b1b; }
         .align-form { display: flex; align-items: center; gap: 8px; margin: 0; }
         .input-mini { width: 80px; padding: 8px 12px; min-width: 0; }
-        .btn-icon { background: white; border: 1px solid var(--border-light); color: var(--text-main); border-radius: 8px; padding: 8px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; }
-        .btn-icon:hover { background: #f1f5f9; border-color: #cbd5e1; }
+        .btn-icon { background: white; border: 1px solid var(--border-light); border-radius: 8px; padding: 8px; cursor: pointer; }
         .flash-msg { padding: 16px; margin-bottom: 24px; border-radius: 10px; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 10px; background-color: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
     </style>
 </head>
@@ -61,100 +59,80 @@
             <img src="{{ url_for('static', filename='logo.png') }}?v=2" alt="FoodLoop" class="logo-img">
             <span class="brand-name">FoodLoop</span>
         </div>
-        
         <div class="nav-menu">
+            <span class="nav-section">Core</span>
             <a href="{{ url_for('main.dashboard') }}" class="nav-item"><i data-lucide="layout-dashboard"></i> Overview</a>
-            <a href="{{ url_for('main.inventory') }}" class="nav-item active"><i data-lucide="package"></i> Inventory</a>
+            <a href="{{ url_for('main.inventory') }}" class="nav-item active"><i data-lucide="package"></i> Magazzino</a>
+            <span class="nav-section">Operatività</span>
             <a href="{{ url_for('main.menu') }}" class="nav-item"><i data-lucide="book-open"></i> Menu Planner</a>
-            <a href="{{ url_for('main.suppliers') }}" class="nav-item"><i data-lucide="shopping-cart"></i> Shopping & Suppliers</a>
+            <a href="{{ url_for('main.suppliers') }}" class="nav-item"><i data-lucide="shopping-cart"></i> Fornitori & Ordini</a>
         </div>
         <div class="bottom-nav">
-            {% if current_user.role == 'owner' %}
-                <a href="{{ url_for('main.analytics') }}" class="nav-item"><i data-lucide="pie-chart"></i> Reports & Analysis</a>
-                <a href="{{ url_for('main.profile') }}" class="nav-item"><i data-lucide="user"></i> Account</a>
-                <a href="{{ url_for('main.settings') }}" class="nav-item"><i data-lucide="settings"></i> Settings</a>
-            {% endif %}
-            <a href="{{ url_for('auth.logout') }}" class="nav-item" style="color: #ef4444;"><i data-lucide="log-out"></i> Logout</a>
+            <span class="nav-section">Business</span>
+            <a href="{{ url_for('main.analytics') }}" class="nav-item"><i data-lucide="pie-chart"></i> Reports & Analysis</a>
+            <span class="nav-section">Impostazioni</span>
+            <a href="{{ url_for('main.profile') }}" class="nav-item"><i data-lucide="user"></i> Account</a>
+            <a href="{{ url_for('main.settings') }}" class="nav-item"><i data-lucide="settings"></i> Gestione Team</a>
+            <a href="{{ url_for('auth.logout') }}" class="nav-item" style="color: #ef4444; margin-top: 10px;"><i data-lucide="log-out"></i> Logout</a>
         </div>
     </div>
 
     <div class="main-content">
         <div class="header">
-            <div>
-                <h1>Inventory Management</h1>
-                <p>Monitora le giacenze, allinea i valori e tieni traccia dei costi.</p>
-            </div>
+            <div><h1>Inventory</h1><p>Gestisci le giacenze e i costi delle materie prime.</p></div>
             <div class="user-profile">
-                <div class="avatar">{{ current_user.full_name[0] | upper }}</div>
-                <div style="display: flex; flex-direction: column;">
-                    <span style="font-weight: 600; font-size: 13px;">{{ current_user.full_name }}</span>
-                    <span style="font-size: 11px; color: var(--text-muted);">{{ current_user.get_restaurant_name }}</span>
-                </div>
+                {% if current_user.profile_image and current_user.profile_image != 'default' %}
+                    <img src="{{ url_for('static', filename='avatars/' + current_user.profile_image) }}" class="avatar" alt="Avatar">
+                {% else %}
+                    <div class="avatar">{{ current_user.full_name[0] | upper }}</div>
+                {% endif %}
+                <div style="display: flex; flex-direction: column;"><span style="font-weight: 600; font-size: 13px;">{{ current_user.full_name }}</span><span style="font-size: 11px; color: var(--text-muted);">{{ current_user.get_restaurant_name }}</span></div>
             </div>
         </div>
 
         {% with messages = get_flashed_messages() %}
-          {% if messages %}
-            {% for message in messages %}
-              <div class="flash-msg"><i data-lucide="check-circle-2"></i> {{ message }}</div>
-            {% endfor %}
-          {% endif %}
+            {% if messages %}{% for m in messages %}<div class="flash-msg"><i data-lucide="check-circle-2"></i> {{ m }}</div>{% endfor %}{% endif %}
         {% endwith %}
 
         <div class="card">
-            <div class="card-header"><i data-lucide="plus-square" style="color: var(--primary);"></i><h3>Aggiungi Nuovo Articolo</h3></div>
+            <div class="card-header"><i data-lucide="plus-square" style="color: var(--primary);"></i><h3>Aggiungi Articolo</h3></div>
             <form action="{{ url_for('main.add_inventory_item') }}" method="POST">
                 <div class="form-row">
-                    <input type="text" name="name" placeholder="Item Name (Es. Pomodori)" required>
-                    <input type="number" step="0.01" name="quantity" placeholder="Quantità Iniziale" required>
-                    <input type="text" name="unit" placeholder="Unità (Es. kg)" required style="flex: 0.5;">
+                    <input type="text" name="name" placeholder="Nome Prodotto" required>
+                    <input type="number" step="0.01" name="quantity" placeholder="Quantità" required>
+                    <input type="text" name="unit" placeholder="Unità (kg, l...)" required style="flex: 0.5;">
                 </div>
                 <div class="form-row">
-                    <input type="number" step="0.01" name="threshold" placeholder="Soglia Minima Allarme" required>
-                    <input type="number" step="0.01" name="unit_cost" placeholder="Costo per Unità (€)" required>
-                    <select name="supplier_id">
-                        <option value="" selected>Seleziona Fornitore...</option>
-                        {% for s in suppliers %}
-                        <option value="{{ s.id }}">{{ s.name }}</option>
-                        {% endfor %}
-                    </select>
-                    <button type="submit" class="btn-primary"><i data-lucide="save" style="width: 18px; height: 18px;"></i> Salva</button>
+                    <input type="number" step="0.01" name="threshold" placeholder="Soglia Minima" required>
+                    <input type="number" step="0.01" name="unit_cost" placeholder="Costo Unità (€)" required>
+                    <select name="supplier_id"><option value="">Seleziona Fornitore...</option>{% for s in suppliers %}<option value="{{ s.id }}">{{ s.name }}</option>{% endfor %}</select>
+                    <button type="submit" class="btn-primary"><i data-lucide="save"></i> Salva</button>
                 </div>
             </form>
         </div>
 
         <div class="card">
-            <div class="card-header" style="justify-content: space-between;">
-                <h3>Inventory Overview</h3>
-                <div style="display: flex; gap: 10px; align-items: center; color: var(--text-muted); font-size: 14px;"><i data-lucide="filter" style="width: 16px;"></i> Filter</div>
-            </div>
             <div class="table-container">
                 <table>
-                    <thead><tr><th>Item Name</th><th>Quantity</th><th>Unit Cost</th><th>Status</th><th>Action (Conta Reale)</th></tr></thead>
+                    <thead><tr><th>Prodotto</th><th>Giacenza</th><th>Costo</th><th>Stato</th><th>Azione</th></tr></thead>
                     <tbody>
                         {% for p in products %}
                         <tr>
-                            <td class="item-name">{{ p.name }}</td>
-                            <td style="font-weight: 500;">{{ p.quantity }} <span class="text-sub">{{ p.unit }}</span></td>
-                            <td class="text-sub">€{{ p.unit_cost }}</td>
+                            <td style="font-weight:600;">{{ p.name }}</td>
+                            <td>{{ p.quantity }} <span style="color:var(--text-muted);">{{ p.unit }}</span></td>
+                            <td style="color:var(--text-muted);">€{{ p.unit_cost }}</td>
                             <td>
-                                {% if p.quantity == 0 %}
-                                    <span class="status-badge status-danger"><i data-lucide="alert-circle" style="width: 14px;"></i> Out of Stock</span>
-                                {% elif p.quantity <= p.min_threshold %}
-                                    <span class="status-badge status-low"><i data-lucide="alert-triangle" style="width: 14px;"></i> Low Stock</span>
-                                {% else %}
-                                    <span class="status-badge status-good"><i data-lucide="check-circle" style="width: 14px;"></i> Good</span>
-                                {% endif %}
+                                {% if p.quantity == 0 %}<span class="status-badge status-danger">Esaurito</span>
+                                {% elif p.quantity <= p.min_threshold %}<span class="status-badge status-low">Sotto Scorta</span>
+                                {% else %}<span class="status-badge status-good">Ottimale</span>{% endif %}
                             </td>
                             <td>
                                 <form action="{{ url_for('main.align_inventory', product_id=p.id) }}" method="POST" class="align-form">
-                                    <input type="number" step="0.01" name="actual_quantity" placeholder="Qt. Reale" class="input-mini" required>
-                                    <button type="submit" class="btn-icon" title="Allinea Inventario"><i data-lucide="refresh-cw" style="width: 16px;"></i></button>
+                                    <input type="number" step="0.01" name="actual_quantity" placeholder="Reale" class="input-mini" required>
+                                    <button type="submit" class="btn-icon"><i data-lucide="refresh-cw" style="width:16px;"></i></button>
                                 </form>
                             </td>
                         </tr>
-                        {% else %}
-                        <tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 40px;">Nessun articolo presente. Inizia ad aggiungere prodotti.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>

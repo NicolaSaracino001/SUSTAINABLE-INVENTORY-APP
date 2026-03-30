@@ -8,129 +8,58 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        :root { 
-            --primary: #10b981; 
-            --primary-dark: #059669; 
-            --sidebar-bg: #ffffff;
-            --bg-color: #f8fafc; 
-            --card-bg: #ffffff; 
-            --text-main: #0f172a; 
-            --text-muted: #64748b; 
-            --border-light: #e2e8f0;
-            --accent-blue: #3b82f6;
-        }
+        :root { --primary: #10b981; --sidebar-bg: #ffffff; --bg-color: #f8fafc; --card-bg: #ffffff; --text-main: #0f172a; --text-muted: #64748b; --border-light: #e2e8f0; --accent-blue: #3b82f6; }
+        body { font-family: 'Inter', sans-serif; margin: 0; background-color: var(--bg-color); color: var(--text-main); display: flex; min-height: 100vh; }
         
-        body { 
-            font-family: 'Inter', sans-serif; 
-            margin: 0; 
-            background-color: var(--bg-color); 
-            color: var(--text-main); 
-            display: flex;
-            min-height: 100vh;
-        }
-
-        /* SIDEBAR */
-        .sidebar {
-            width: 260px; background-color: var(--sidebar-bg); position: fixed;
-            height: 100vh; left: 0; top: 0; border-right: 1px solid var(--border-light);
-            display: flex; flex-direction: column; padding: 24px 20px;
-            box-sizing: border-box; z-index: 1000;
-        }
-
-        .logo-container { 
-            display: flex; align-items: center; gap: 12px; 
-            margin-bottom: 40px; padding: 0 10px; 
-        }
-        .logo-img { 
-            height: 42px; width: 42px; border-radius: 12px; 
-            box-shadow: 0 4px 10px rgba(22, 163, 74, 0.2); 
-        }
-        .brand-name {
-            font-size: 22px; font-weight: 800; color: var(--text-main); 
-            letter-spacing: -0.5px;
-        }
-
-        .nav-menu { display: flex; flex-direction: column; gap: 8px; flex-grow: 1; }
-
-        .nav-item {
-            display: flex; align-items: center; gap: 12px;
-            color: var(--text-muted); text-decoration: none;
-            font-weight: 600; padding: 12px 16px;
-            border-radius: 10px; transition: all 0.2s ease; font-size: 14px;
-        }
-        .nav-item i { width: 20px; height: 20px; }
+        /* SIDEBAR CON SEZIONI */
+        .sidebar { width: 260px; background-color: var(--sidebar-bg); position: fixed; height: 100vh; left: 0; top: 0; border-right: 1px solid var(--border-light); display: flex; flex-direction: column; padding: 24px 20px; box-sizing: border-box; z-index: 1000; overflow-y: auto;}
+        .logo-container { display: flex; align-items: center; gap: 12px; margin-bottom: 30px; padding: 0 10px; }
+        .logo-img { height: 42px; width: 42px; border-radius: 12px; box-shadow: 0 4px 10px rgba(22, 163, 74, 0.2); }
+        .brand-name { font-size: 22px; font-weight: 800; color: var(--text-main); letter-spacing: -0.5px; }
+        .nav-section { display: block; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin: 20px 0 8px 10px; letter-spacing: 0.8px; }
+        .nav-menu { display: flex; flex-direction: column; gap: 4px; flex-grow: 1; }
+        .nav-item { display: flex; align-items: center; gap: 12px; color: var(--text-muted); text-decoration: none; font-weight: 600; padding: 10px 16px; border-radius: 10px; transition: all 0.2s ease; font-size: 14px; }
+        .nav-item i { width: 18px; height: 18px; }
         .nav-item:hover { background-color: #f1f5f9; color: var(--text-main); }
         .nav-item.active { background-color: var(--primary); color: white; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2); }
-        .nav-item.bottom-active { background-color: #f1f5f9; color: var(--primary); }
-
-        .bottom-nav { border-top: 1px solid var(--border-light); padding-top: 20px; display: flex; flex-direction: column; gap: 8px; }
-
-        /* AREA CENTRALE */
-        .main-content {
-            margin-left: 260px; padding: 40px 50px;
-            flex-grow: 1; width: calc(100% - 260px); box-sizing: border-box;
-        }
-
+        .bottom-nav { border-top: 1px solid var(--border-light); padding-top: 10px; margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+        
+        .main-content { margin-left: 260px; padding: 40px 50px; flex-grow: 1; width: calc(100% - 260px); box-sizing: border-box; }
         .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px; }
         .header h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
         .header p { margin: 6px 0 0 0; color: var(--text-muted); font-size: 15px; }
-
-        .user-profile {
-            display: flex; align-items: center; gap: 12px;
-            background: white; padding: 6px 16px 6px 6px;
-            border-radius: 50px; border: 1px solid var(--border-light);
-        }
-        .avatar {
-            width: 32px; height: 32px; border-radius: 50%;
-            background: var(--text-main); color: white; 
-            display: flex; align-items: center; justify-content: center;
-            font-weight: 600; font-size: 14px;
-        }
-
-        /* GRID CARDS */
+        
+        .user-profile { display: flex; align-items: center; gap: 12px; background: white; padding: 6px 16px 6px 6px; border-radius: 50px; border: 1px solid var(--border-light); }
+        .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--text-main); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; object-fit: cover; }
+        
         .layout-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-        @media (max-width: 900px) { .layout-grid { grid-template-columns: 1fr; } }
-
-        .card { 
-            background: var(--card-bg); padding: 30px; border-radius: 16px; 
-            border: 1px solid var(--border-light); margin-bottom: 24px; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
+        .card { background: var(--card-bg); padding: 30px; border-radius: 16px; border: 1px solid var(--border-light); margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #f1f5f9;}
         .card-header h3 { margin: 0; font-size: 18px; color: var(--text-main); }
-
-        /* INFO LIST */
+        
         .info-list { list-style: none; padding: 0; margin: 0; }
         .info-list li { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f8fafc; font-size: 14px;}
-        .info-list li:last-child { border-bottom: none; }
         .info-label { color: var(--text-muted); font-weight: 500; }
         .info-value { color: var(--text-main); font-weight: 600; }
-
-        /* FORM */
-        .form-group { margin-bottom: 15px; }
-        input { 
-            width: 100%; padding: 12px 16px; border: 1px solid var(--border-light); 
-            border-radius: 10px; font-family: 'Inter', sans-serif; font-size: 14px; 
-            outline: none; transition: all 0.2s; box-sizing: border-box; background: #f8fafc; 
-        }
-        input:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); }
         
-        .btn-primary { 
-            width: 100%; padding: 12px 20px; border: none; border-radius: 10px; cursor: pointer; 
-            font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; 
-            color: white; background-color: var(--primary); 
-            display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s;
-        }
-        .btn-primary:hover { background-color: var(--primary-dark); }
+        .form-group { margin-bottom: 15px; }
+        input[type="number"] { width: 100%; padding: 12px 16px; border: 1px solid var(--border-light); border-radius: 10px; font-family: 'Inter', sans-serif; font-size: 14px; outline: none; transition: all 0.2s; box-sizing: border-box; background: #f8fafc; }
+        input[type="file"] { padding: 10px; background: white; border: 1px dashed #cbd5e1; width: 100%; box-sizing: border-box; border-radius: 10px;}
+        input[type="number"]:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); }
+        
+        /* STILI PER IL SELETTORE AVATAR */
+        .avatar-options { display: flex; gap: 15px; margin-bottom: 20px; }
+        .avatar-btn { flex: 1; padding: 15px 10px; border: 1px solid var(--border-light); border-radius: 12px; text-align: center; cursor: pointer; transition: 0.2s; background: white; position: relative;}
+        .avatar-btn:hover { border-color: var(--primary); background: #f0fdf4; }
+        .avatar-btn input[type="radio"] { display: none; }
+        .avatar-btn:has(input[type="radio"]:checked) { border: 2px solid var(--primary); background: #f0fdf4; }
+        .avatar-preview { width: 50px; height: 50px; border-radius: 50%; margin: 0 auto 10px auto; background: #f1f5f9; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .avatar-preview img { width: 100%; height: 100%; object-fit: cover; }
 
-        .btn-export {
-            width: 100%; padding: 14px 20px; border: none; border-radius: 10px; cursor: pointer; 
-            font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600; 
-            color: white; background-color: var(--text-main); 
-            display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; text-decoration: none;
-        }
-        .btn-export:hover { background-color: black; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-
+        .btn-primary { width: 100%; padding: 12px 20px; border: none; border-radius: 10px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; color: white; background-color: var(--primary); display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; }
+        .btn-primary:hover { background-color: #059669; }
+        .btn-export { width: 100%; padding: 14px 20px; border: none; border-radius: 10px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600; color: white; background-color: var(--text-main); display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; text-decoration: none; }
+        .btn-export:hover { background-color: black; }
         .flash-msg { padding: 16px; margin-bottom: 24px; border-radius: 10px; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 10px; background-color: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
     </style>
 </head>
@@ -143,35 +72,24 @@
         </div>
         
         <div class="nav-menu">
-            <a href="{{ url_for('main.dashboard') }}" class="nav-item">
-                <i data-lucide="layout-dashboard"></i> Overview
-            </a>
-            <a href="{{ url_for('main.inventory') }}" class="nav-item">
-                <i data-lucide="package"></i> Inventory
-            </a>
-            <a href="{{ url_for('main.menu') }}" class="nav-item">
-                <i data-lucide="book-open"></i> Menu Planner
-            </a>
-            <a href="{{ url_for('main.suppliers') }}" class="nav-item">
-                <i data-lucide="shopping-cart"></i> Shopping & Suppliers
-            </a>
+            <span class="nav-section">Core</span>
+            <a href="{{ url_for('main.dashboard') }}" class="nav-item"><i data-lucide="layout-dashboard"></i> Overview</a>
+            <a href="{{ url_for('main.inventory') }}" class="nav-item"><i data-lucide="package"></i> Magazzino</a>
+            
+            <span class="nav-section">Operatività</span>
+            <a href="{{ url_for('main.menu') }}" class="nav-item"><i data-lucide="book-open"></i> Menu Planner</a>
+            <a href="{{ url_for('main.suppliers') }}" class="nav-item"><i data-lucide="shopping-cart"></i> Fornitori & Ordini</a>
         </div>
 
         <div class="bottom-nav">
-            {% if current_user.role == 'owner' %}
-                <a href="{{ url_for('main.analytics') }}" class="nav-item">
-                    <i data-lucide="pie-chart"></i> Reports & Analysis
-                </a>
-                <a href="{{ url_for('main.profile') }}" class="nav-item bottom-active">
-                    <i data-lucide="user"></i> Account
-                </a>
-                <a href="{{ url_for('main.settings') }}" class="nav-item">
-                    <i data-lucide="settings"></i> Settings
-                </a>
-            {% endif %}
-            <a href="{{ url_for('auth.logout') }}" class="nav-item" style="color: #ef4444;">
-                <i data-lucide="log-out"></i> Logout
-            </a>
+            <span class="nav-section">Business</span>
+            <a href="{{ url_for('main.analytics') }}" class="nav-item"><i data-lucide="pie-chart"></i> Reports & Analysis</a>
+            
+            <span class="nav-section">Impostazioni</span>
+            <a href="{{ url_for('main.profile') }}" class="nav-item active"><i data-lucide="user"></i> Account</a>
+            <a href="{{ url_for('main.settings') }}" class="nav-item"><i data-lucide="settings"></i> Gestione Team</a>
+            
+            <a href="{{ url_for('auth.logout') }}" class="nav-item" style="color: #ef4444; margin-top: 10px;"><i data-lucide="log-out"></i> Logout</a>
         </div>
     </div>
 
@@ -179,10 +97,14 @@
         <div class="header">
             <div>
                 <h1>Gestione Account</h1>
-                <p>Visualizza i tuoi dettagli, imposta il budget operativo ed esporta i dati.</p>
+                <p>Personalizza il tuo profilo, imposta il budget ed esporta i dati.</p>
             </div>
             <div class="user-profile">
-                <div class="avatar">{{ current_user.full_name[0] | upper }}</div>
+                {% if current_user.profile_image and current_user.profile_image != 'default' %}
+                    <img src="{{ url_for('static', filename='avatars/' + current_user.profile_image) }}" class="avatar" alt="Avatar">
+                {% else %}
+                    <div class="avatar">{{ current_user.full_name[0] | upper }}</div>
+                {% endif %}
                 <div style="display: flex; flex-direction: column;">
                     <span style="font-weight: 600; font-size: 13px;">{{ current_user.full_name }}</span>
                     <span style="font-size: 11px; color: var(--text-muted);">{{ current_user.get_restaurant_name }}</span>
@@ -201,66 +123,75 @@
         <div class="layout-grid">
             <div>
                 <div class="card">
-                    <div class="card-header">
-                        <i data-lucide="badge-check" style="color: var(--primary);"></i>
-                        <h3>Dettagli Profilo</h3>
-                    </div>
-                    <ul class="info-list">
-                        <li><span class="info-label">Nome Completo:</span> <span class="info-value">{{ user.full_name }}</span></li>
-                        <li><span class="info-label">Email:</span> <span class="info-value">{{ user.email }}</span></li>
-                        <li><span class="info-label">Nome Locale:</span> <span class="info-value">{{ user.restaurant_name }}</span></li>
-                        <li>
-                            <span class="info-label">Ruolo:</span> 
-                            <span class="info-value" style="background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 12px; font-size: 12px;">{{ user.role | upper }}</span>
-                        </li>
-                    </ul>
+                    <div class="card-header"><i data-lucide="camera" style="color: var(--primary);"></i><h3>Personalizza Avatar</h3></div>
+                    
+                    <form action="{{ url_for('main.update_avatar') }}" method="POST" enctype="multipart/form-data">
+                        <div class="avatar-options">
+                            <label class="avatar-btn">
+                                <input type="radio" name="avatar_type" value="human" onchange="document.getElementById('file-upload-box').style.display='none'">
+                                <div class="avatar-preview">
+                                    <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ user.full_name }}&backgroundColor=e2e8f0" alt="Umano">
+                                </div>
+                                <div style="font-size: 13px; font-weight: 600; color: var(--text-main);">Umano</div>
+                            </label>
+
+                            <label class="avatar-btn">
+                                <input type="radio" name="avatar_type" value="robot" onchange="document.getElementById('file-upload-box').style.display='none'">
+                                <div class="avatar-preview">
+                                    <img src="https://api.dicebear.com/7.x/bottts/svg?seed={{ user.full_name }}&backgroundColor=e2e8f0" alt="Robot">
+                                </div>
+                                <div style="font-size: 13px; font-weight: 600; color: var(--text-main);">Robot</div>
+                            </label>
+
+                            <label class="avatar-btn">
+                                <input type="radio" name="avatar_type" value="file" onchange="document.getElementById('file-upload-box').style.display='block'" checked>
+                                <div class="avatar-preview" style="color: var(--text-muted);">
+                                    <i data-lucide="upload-cloud"></i>
+                                </div>
+                                <div style="font-size: 13px; font-weight: 600; color: var(--text-main);">Tua Foto</div>
+                            </label>
+                        </div>
+
+                        <div id="file-upload-box" class="form-group">
+                            <input type="file" name="avatar_file" accept=".jpg, .jpeg, .png">
+                        </div>
+                        
+                        <button type="submit" class="btn-primary"><i data-lucide="save"></i> Salva Avatar</button>
+                    </form>
                 </div>
 
                 <div class="card">
-                    <div class="card-header">
-                        <i data-lucide="download" style="color: var(--text-main);"></i>
-                        <h3>Esportazione Dati</h3>
-                    </div>
-                    <p style="font-size: 14px; color: var(--text-muted); margin-top: -10px; margin-bottom: 20px;">
-                        Scarica l'inventario attuale in formato Excel per la contabilità.
-                    </p>
-                    <a href="{{ url_for('main.export_excel') }}" class="btn-export">
-                        <i data-lucide="file-spreadsheet"></i> Scarica Report Excel
-                    </a>
+                    <div class="card-header"><i data-lucide="badge-check" style="color: var(--text-main);"></i><h3>Dettagli Profilo</h3></div>
+                    <ul class="info-list">
+                        <li><span class="info-label">Nome:</span> <span class="info-value">{{ user.full_name }}</span></li>
+                        <li><span class="info-label">Email:</span> <span class="info-value">{{ user.email }}</span></li>
+                        <li><span class="info-label">Locale:</span> <span class="info-value">{{ user.restaurant_name }}</span></li>
+                    </ul>
                 </div>
             </div>
 
             <div>
                 <div class="card">
-                    <div class="card-header">
-                        <i data-lucide="wallet" style="color: var(--accent-blue);"></i>
-                        <h3>Budget Operativo Mensile</h3>
-                    </div>
-                    <p style="font-size: 14px; color: var(--text-muted); margin-top: -10px; margin-bottom: 20px;">
-                        Imposta un limite di spesa. L'intelligenza Artificiale ti avviserà se il valore del tuo magazzino supera questo budget.
-                    </p>
-                    
+                    <div class="card-header"><i data-lucide="wallet" style="color: var(--accent-blue);"></i><h3>Budget Operativo</h3></div>
                     <div style="background: #f8fafc; padding: 20px; border-radius: 12px; border: 1px solid var(--border-light); margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
                         <span style="font-weight: 600; color: var(--text-muted);">Budget Attuale:</span>
                         <span style="font-size: 24px; font-weight: 800; color: var(--primary);">€ {{ user.monthly_budget }}</span>
                     </div>
-
                     <form action="{{ url_for('main.update_budget') }}" method="POST">
                         <div class="form-group">
-                            <label style="display: block; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px;">Nuovo Limite di Budget (€)</label>
-                            <input type="number" step="0.01" name="budget" placeholder="es. 5000" required>
+                            <input type="number" step="0.01" name="budget" placeholder="Nuovo limite (€)" required>
                         </div>
-                        <button type="submit" class="btn-primary">
-                            <i data-lucide="save"></i> Aggiorna Budget
-                        </button>
+                        <button type="submit" class="btn-primary"><i data-lucide="save"></i> Aggiorna Budget</button>
                     </form>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><i data-lucide="download" style="color: var(--text-main);"></i><h3>Esportazione Dati</h3></div>
+                    <a href="{{ url_for('main.export_excel') }}" class="btn-export"><i data-lucide="file-spreadsheet"></i> Scarica Report Excel</a>
                 </div>
             </div>
         </div>
     </div>
-
-    <script>
-        lucide.createIcons();
-    </script>
+    <script>lucide.createIcons();</script>
 </body>
 </html>
