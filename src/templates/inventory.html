@@ -6,172 +6,299 @@
     <title>FoodLoop - Magazzino</title>
     <link rel="icon" href="{{ url_for('static', filename='logo.png') }}" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        :root { --primary: #10b981; --primary-dark: #059669; --bg-color: #f8fafc; --card-bg: #ffffff; --text-main: #1e293b; --text-muted: #64748b; }
-        body { font-family: 'Inter', sans-serif; margin: 0; background-color: var(--bg-color); color: var(--text-main); padding-top: 80px; }
-
-        .navbar { position: fixed; top: 0; left: 0; right: 0; height: 80px; background: #ffffff; box-shadow: 0 2px 15px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between; padding: 0 50px; z-index: 1000; }
-        .logo-container { display: flex; align-items: center; height: 100%; }
-        .logo-img { height: 50px; width: auto; mix-blend-mode: multiply; }
+        :root { 
+            --primary: #10b981; 
+            --primary-dark: #059669; 
+            --sidebar-bg: #ffffff;
+            --bg-color: #f8fafc; 
+            --card-bg: #ffffff; 
+            --text-main: #0f172a; 
+            --text-muted: #64748b; 
+            --border-light: #e2e8f0;
+        }
         
-        .nav-links { display: flex; gap: 20px; align-items: center; }
-        .nav-item { color: var(--text-muted); text-decoration: none; font-weight: 600; padding: 10px 18px; border-radius: 8px; transition: all 0.2s; font-size: 15px; }
-        .nav-item:hover, .nav-item.active { background: #f1f5f9; color: var(--primary); }
+        body { 
+            font-family: 'Inter', sans-serif; 
+            margin: 0; 
+            background-color: var(--bg-color); 
+            color: var(--text-main); 
+            display: flex;
+            min-height: 100vh;
+        }
 
-        .user-menu { position: relative; display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 6px 10px; border-radius: 12px; transition: background 0.2s; border: 1px solid transparent;}
-        .user-menu:hover { background: #f8fafc; border-color: #e2e8f0; }
-        .user-details { display: flex; flex-direction: column; text-align: right; }
-        .res-name { font-weight: 700; font-size: 14px; color: var(--text-main); line-height: 1.2;}
-        .user-name { font-size: 12px; color: var(--text-muted); }
-        .avatar { width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 18px; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);}
+        /* SIDEBAR IDENTICA A DRIBBBLE */
+        .sidebar {
+            width: 260px;
+            background-color: var(--sidebar-bg);
+            position: fixed;
+            height: 100vh;
+            left: 0;
+            top: 0;
+            border-right: 1px solid var(--border-light);
+            display: flex;
+            flex-direction: column;
+            padding: 24px 20px;
+            box-sizing: border-box;
+            z-index: 1000;
+        }
 
-        .user-menu::after { content: ''; position: absolute; top: 100%; left: 0; width: 100%; height: 15px; background: transparent; }
-        .dropdown-content { display: none; position: absolute; top: calc(100% + 10px); right: 0; background-color: white; min-width: 220px; box-shadow: 0 15px 35px rgba(0,0,0,0.1); border-radius: 12px; overflow: hidden; z-index: 1001; border: 1px solid #e2e8f0; }
-        .user-menu:hover .dropdown-content { display: block; }
+        .logo-container { margin-bottom: 40px; padding: 0 10px; }
+        .logo-img { height: 40px; width: auto; }
+
+        .nav-menu { display: flex; flex-direction: column; gap: 8px; flex-grow: 1; }
+
+        .nav-item {
+            display: flex; align-items: center; gap: 12px;
+            color: var(--text-muted); text-decoration: none;
+            font-weight: 600; padding: 12px 16px;
+            border-radius: 10px; transition: all 0.2s ease; font-size: 14px;
+        }
+        .nav-item i { width: 20px; height: 20px; } /* Dimensione icone */
+        .nav-item:hover { background-color: #f1f5f9; color: var(--text-main); }
+        .nav-item.active { background-color: var(--primary); color: white; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2); }
+
+        .bottom-nav { border-top: 1px solid var(--border-light); padding-top: 20px; display: flex; flex-direction: column; gap: 8px; }
+
+        /* AREA CENTRALE */
+        .main-content {
+            margin-left: 260px; padding: 40px 50px;
+            flex-grow: 1; width: calc(100% - 260px); box-sizing: border-box;
+        }
+
+        .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px; }
+        .header h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+        .header p { margin: 6px 0 0 0; color: var(--text-muted); font-size: 15px; }
+
+        .user-profile {
+            display: flex; align-items: center; gap: 12px;
+            background: white; padding: 6px 16px 6px 6px;
+            border-radius: 50px; border: 1px solid var(--border-light);
+        }
+        .avatar {
+            width: 32px; height: 32px; border-radius: 50%;
+            background: var(--text-main); color: white; 
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 600; font-size: 14px;
+        }
+
+        /* CARD AGGIUNTA PRODOTTO (Minimal) */
+        .card { 
+            background: var(--card-bg); padding: 24px; border-radius: 16px; 
+            border: 1px solid var(--border-light); margin-bottom: 30px; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+        .card-header h3 { margin: 0; font-size: 16px; color: var(--text-main); }
+
+        .form-row { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap;}
+        input, select { 
+            flex: 1; padding: 12px 16px; border: 1px solid var(--border-light); 
+            border-radius: 10px; font-family: 'Inter', sans-serif; font-size: 14px; 
+            outline: none; transition: all 0.2s; background: #f8fafc; 
+        }
+        input:focus, select:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); }
         
-        .dropdown-content a { color: var(--text-main); padding: 14px 20px; text-decoration: none; display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; transition: 0.2s; }
-        .dropdown-content a:hover { background-color: #f8fafc; color: var(--primary); }
-        .logout-link { color: #ef4444 !important; border-top: 1px solid #f1f5f9; }
-        .logout-link:hover { background-color: #fef2f2 !important; color: #dc2626 !important; }
+        .btn-primary { 
+            padding: 12px 20px; border: none; border-radius: 10px; cursor: pointer; 
+            font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; 
+            color: white; background-color: var(--primary); 
+            display: flex; align-items: center; gap: 8px; transition: 0.2s;
+        }
+        .btn-primary:hover { background-color: var(--primary-dark); }
 
-        .content { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
-        .header { margin-bottom: 30px; }
-        .header h1 { margin: 0; font-size: 32px; color: var(--text-main); font-weight: 800; letter-spacing: -0.5px; }
-        .header p { margin: 8px 0 0 0; color: var(--text-muted); font-size: 16px; }
+        /* TABELLA STILE DRIBBBLE */
+        .table-container { width: 100%; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { 
+            padding: 16px; color: var(--text-muted); font-weight: 600; 
+            font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border-light);
+        }
+        td { padding: 16px; border-bottom: 1px solid #f1f5f9; font-size: 14px; vertical-align: middle; }
+        tr:hover td { background-color: #f8fafc; }
 
-        .card { background: var(--card-bg); padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.03); margin-bottom: 30px; border: 1px solid #f1f5f9; }
-        .card h3 { margin-top: 0; color: var(--text-main); font-size: 18px; margin-bottom: 20px; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px;}
+        .item-name { font-weight: 600; color: var(--text-main); }
+        .text-sub { color: var(--text-muted); }
 
-        .form-row { display: flex; gap: 15px; margin-bottom: 15px; align-items: center; flex-wrap: wrap;}
-        input, select { flex: 1; padding: 14px 15px; border: 2px solid #e2e8f0; border-radius: 12px; font-family: 'Inter', sans-serif; font-size: 15px; outline: none; transition: all 0.3s; min-width: 150px; background: #f8fafc; }
-        input:focus, select:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.1); }
-        
-        .btn { padding: 14px 20px; border: none; border-radius: 12px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600; color: white; transition: all 0.3s; background-color: var(--text-main); }
-        .btn:hover { background-color: black; transform: translateY(-2px); box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2); }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th { text-align: left; padding: 12px; color: var(--text-muted); font-weight: 600; border-bottom: 2px solid #e2e8f0; }
-        td { padding: 15px 12px; border-bottom: 1px solid #f1f5f9; color: var(--text-main); vertical-align: middle;}
-        
-        .badge { background: #f1f5f9; padding: 6px 10px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--text-muted); }
-        .badge-danger { background: #fef2f2; color: #ef4444; }
+        /* I Badge di Stato (Come in Inventory Management) */
+        .status-badge { 
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; 
+        }
+        .status-good { background: #dcfce7; color: #166534; }
+        .status-low { background: #fef08a; color: #854d0e; }
+        .status-danger { background: #fee2e2; color: #991b1b; }
 
-        /* Nuovo stile per il pulsante Allinea */
-        .btn-align { background: #e0f2fe; color: #0284c7; border-radius: 8px; padding: 8px 12px; font-size: 13px; font-weight: 700; border: 1px solid transparent; cursor: pointer; transition: 0.2s;}
-        .btn-align:hover { background: #bae6fd; transform: scale(1.05);}
+        /* Form di Allineamento Inline */
+        .align-form { display: flex; align-items: center; gap: 8px; margin: 0; }
+        .input-mini { width: 80px; padding: 8px 12px; min-width: 0; }
+        .btn-icon { 
+            background: white; border: 1px solid var(--border-light); color: var(--text-main); 
+            border-radius: 8px; padding: 8px; cursor: pointer; transition: 0.2s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .btn-icon:hover { background: #f1f5f9; border-color: #cbd5e1; }
 
-        .flash-msg { padding: 16px; margin-bottom: 25px; border-radius: 12px; font-weight: 500; display: flex; align-items: center; gap: 10px; background-color: #f0fdf4; color: #16a34a; border-left: 4px solid #16a34a; }
+        .flash-msg { padding: 16px; margin-bottom: 24px; border-radius: 10px; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 10px; background-color: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
     </style>
 </head>
 <body>
-    <div class="navbar">
+
+    <div class="sidebar">
         <div class="logo-container">
-            <img src="{{ url_for('static', filename='logo.png') }}" alt="Logo" class="logo-img" onerror="this.style.display='none';">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="FoodLoop" class="logo-img" onerror="this.style.display='none';">
         </div>
         
-        <div class="nav-links">
-            <a href="{{ url_for('main.dashboard') }}" class="nav-item">Dashboard</a>
-            <a href="{{ url_for('main.inventory') }}" class="nav-item active">Magazzino</a>
-            <a href="{{ url_for('main.menu') }}" class="nav-item">Gestione Menù</a>
-            <a href="{{ url_for('main.suppliers') }}" class="nav-item">Fornitori</a>
-            
-            <div class="user-menu">
-                <div class="user-details">
-                    <span class="res-name">{{ current_user.get_restaurant_name }}</span>
-                    <span class="user-name">{{ current_user.full_name }} ({% if current_user.role == 'owner' %}Admin{% else %}Staff{% endif %})</span>
-                </div>
-                <div class="avatar">{{ current_user.full_name[0] | upper }}</div>
-                
-                <div class="dropdown-content">
-                    {% if current_user.role == 'owner' %}
-                        <a href="{{ url_for('main.analytics') }}">📈 FoodLoop Intelligence</a>
-                        <a href="{{ url_for('main.profile') }}">👤 Profilo & Esportazioni</a>
-                        <a href="{{ url_for('main.settings') }}">⚙️ Impostazioni Staff</a>
-                    {% endif %}
-                    <a href="{{ url_for('auth.logout') }}" class="logout-link">🚪 Esci dall'account</a>
-                </div>
-            </div>
+        <div class="nav-menu">
+            <a href="{{ url_for('main.dashboard') }}" class="nav-item">
+                <i data-lucide="layout-dashboard"></i> Overview
+            </a>
+            <a href="{{ url_for('main.inventory') }}" class="nav-item active">
+                <i data-lucide="package"></i> Inventory
+            </a>
+            <a href="{{ url_for('main.menu') }}" class="nav-item">
+                <i data-lucide="book-open"></i> Menu Planner
+            </a>
+            <a href="{{ url_for('main.suppliers') }}" class="nav-item">
+                <i data-lucide="shopping-cart"></i> Shopping & Suppliers
+            </a>
+        </div>
+
+        <div class="bottom-nav">
+            {% if current_user.role == 'owner' %}
+                <a href="{{ url_for('main.analytics') }}" class="nav-item">
+                    <i data-lucide="pie-chart"></i> Reports & Analysis
+                </a>
+                <a href="{{ url_for('main.profile') }}" class="nav-item">
+                    <i data-lucide="user"></i> Account
+                </a>
+                <a href="{{ url_for('main.settings') }}" class="nav-item">
+                    <i data-lucide="settings"></i> Settings
+                </a>
+            {% endif %}
+            <a href="{{ url_for('auth.logout') }}" class="nav-item" style="color: #ef4444;">
+                <i data-lucide="log-out"></i> Logout
+            </a>
         </div>
     </div>
-    
-    <div class="content">
+
+    <div class="main-content">
         <div class="header">
-            <h1>Magazzino Centrale 📦</h1>
-            <p>Gestisci le materie prime, registra gli acquisti e allinea le giacenze reali.</p>
+            <div>
+                <h1>Inventory Management</h1>
+                <p>Monitora le giacenze, allinea i valori e tieni traccia dei costi.</p>
+            </div>
+            <div class="user-profile">
+                <div class="avatar">{{ current_user.full_name[0] | upper }}</div>
+                <div style="display: flex; flex-direction: column;">
+                    <span style="font-weight: 600; font-size: 13px;">{{ current_user.full_name }}</span>
+                    <span style="font-size: 11px; color: var(--text-muted);">{{ current_user.get_restaurant_name }}</span>
+                </div>
+            </div>
         </div>
 
         {% with messages = get_flashed_messages() %}
           {% if messages %}
             {% for message in messages %}
-              <div class="flash-msg">{{ message }}</div>
+              <div class="flash-msg"><i data-lucide="check-circle-2"></i> {{ message }}</div>
             {% endfor %}
           {% endif %}
         {% endwith %}
 
         <div class="card">
-            <h3>➕ Inserisci Nuovo Prodotto</h3>
+            <div class="card-header">
+                <i data-lucide="plus-square" style="color: var(--primary);"></i>
+                <h3>Aggiungi Nuovo Articolo</h3>
+            </div>
             <form action="{{ url_for('main.add_inventory_item') }}" method="POST">
                 <div class="form-row">
-                    <input type="text" name="name" placeholder="Es. Farina 00" required>
-                    <input type="number" step="0.01" name="quantity" placeholder="Giacenza Iniziale (Es. 50)" required>
-                    <input type="text" name="unit" placeholder="Unità (Es. kg, litri)" required style="flex: 0.5;">
+                    <input type="text" name="name" placeholder="Item Name (Es. Pomodori)" required>
+                    <input type="number" step="0.01" name="quantity" placeholder="Quantità Iniziale" required>
+                    <input type="text" name="unit" placeholder="Unità (Es. kg)" required style="flex: 0.5;">
                 </div>
                 <div class="form-row">
                     <input type="number" step="0.01" name="threshold" placeholder="Soglia Minima Allarme" required>
                     <input type="number" step="0.01" name="unit_cost" placeholder="Costo per Unità (€)" required>
                     <select name="supplier_id">
-                        <option value="" selected>Senza Fornitore</option>
+                        <option value="" selected>Seleziona Fornitore...</option>
                         {% for s in suppliers %}
                         <option value="{{ s.id }}">{{ s.name }}</option>
                         {% endfor %}
                     </select>
+                    <button type="submit" class="btn-primary">
+                        <i data-lucide="save" style="width: 18px; height: 18px;"></i> Salva
+                    </button>
                 </div>
-                <button type="submit" class="btn">Salva in Magazzino</button>
             </form>
         </div>
 
         <div class="card">
-            <h3>📋 Lista Prodotti Attivi</h3>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Prodotto</th>
-                        <th>Giacenza Teorica</th>
-                        <th>Costo Unit.</th>
-                        <th>Valore Tot.</th>
-                        <th>⚖️ Conta Reale (Allinea)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for p in products %}
-                    <tr>
-                        <td style="font-weight: 600;">{{ p.name }}</td>
-                        <td>
-                            <span class="badge {% if p.quantity <= p.min_threshold %}badge-danger{% endif %}">
-                                {{ p.quantity }} {{ p.unit }}
-                            </span>
-                        </td>
-                        <td style="color: var(--text-muted);">{{ p.unit_cost }} €</td>
-                        <td style="font-weight: 700;">{{ "%.2f"|format(p.quantity * p.unit_cost) }} €</td>
-                        
-                        <td>
-                            <form action="{{ url_for('main.align_inventory', product_id=p.id) }}" method="POST" style="display:flex; gap: 5px; margin:0;">
-                                <input type="number" step="0.01" name="actual_quantity" placeholder="Giacenza vera" required style="width: 120px; min-width: 0; padding: 10px; border-radius: 8px;">
-                                <button type="submit" class="btn-align" title="Allinea magazzino con la cella frigo">Allinea</button>
-                            </form>
-                        </td>
-
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 40px;">
-                            Nessun prodotto presente in magazzino. Inizia inserendo il primo!
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <div class="card-header" style="justify-content: space-between;">
+                <h3>Inventory Overview</h3>
+                <div style="display: flex; gap: 10px; align-items: center; color: var(--text-muted); font-size: 14px;">
+                    <i data-lucide="filter" style="width: 16px;"></i> Filter
+                </div>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Item Name</th>
+                            <th>Quantity</th>
+                            <th>Unit Cost</th>
+                            <th>Status</th>
+                            <th>Action (Conta Reale)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in products %}
+                        <tr>
+                            <td class="item-name">{{ p.name }}</td>
+                            <td style="font-weight: 500;">{{ p.quantity }} <span class="text-sub">{{ p.unit }}</span></td>
+                            <td class="text-sub">€{{ p.unit_cost }}</td>
+                            
+                            <td>
+                                {% if p.quantity == 0 %}
+                                    <span class="status-badge status-danger">
+                                        <i data-lucide="alert-circle" style="width: 14px;"></i> Out of Stock
+                                    </span>
+                                {% elif p.quantity <= p.min_threshold %}
+                                    <span class="status-badge status-low">
+                                        <i data-lucide="alert-triangle" style="width: 14px;"></i> Low Stock
+                                    </span>
+                                {% else %}
+                                    <span class="status-badge status-good">
+                                        <i data-lucide="check-circle" style="width: 14px;"></i> Good
+                                    </span>
+                                {% endif %}
+                            </td>
+                            
+                            <td>
+                                <form action="{{ url_for('main.align_inventory', product_id=p.id) }}" method="POST" class="align-form">
+                                    <input type="number" step="0.01" name="actual_quantity" placeholder="Qt. Reale" class="input-mini" required>
+                                    <button type="submit" class="btn-icon" title="Allinea Inventario">
+                                        <i data-lucide="refresh-cw" style="width: 16px;"></i>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 40px;">
+                                Nessun articolo presente. Inizia ad aggiungere prodotti al magazzino.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
 </body>
 </html>
