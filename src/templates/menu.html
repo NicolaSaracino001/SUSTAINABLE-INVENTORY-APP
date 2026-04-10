@@ -3,107 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FoodLoop - Menu</title>
+    <title>FoodLoop — Menu Planner</title>
     <link rel="icon" href="{{ url_for('static', filename='logo.png') }}?v=2" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/foodloop.css') }}">
     <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        :root { --primary: #10b981; --sidebar-bg: #ffffff; --bg-color: #f8fafc; --card-bg: #ffffff; --text-main: #0f172a; --text-muted: #64748b; --border-light: #e2e8f0; --accent-blue: #3b82f6; }
-        body { font-family: 'Inter', sans-serif; margin: 0; background-color: var(--bg-color); color: var(--text-main); display: flex; min-height: 100vh; }
-        
-        .sidebar { width: 260px; background-color: var(--sidebar-bg); position: fixed; height: 100vh; left: 0; top: 0; border-right: 1px solid var(--border-light); display: flex; flex-direction: column; padding: 24px 20px; box-sizing: border-box; z-index: 1000; overflow-y: auto;}
-        .logo-container { display: flex; align-items: center; gap: 12px; margin-bottom: 30px; padding: 0 10px; }
-        .logo-img { height: 42px; width: 42px; border-radius: 12px; box-shadow: 0 4px 10px rgba(22, 163, 74, 0.2); }
-        .brand-name { font-size: 22px; font-weight: 800; color: var(--text-main); letter-spacing: -0.5px; }
-        
-        .nav-section { display: block; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin: 20px 0 8px 10px; letter-spacing: 0.8px; }
-        .nav-menu { display: flex; flex-direction: column; gap: 4px; flex-grow: 1; }
-        .nav-item { display: flex; align-items: center; gap: 12px; color: var(--text-muted); text-decoration: none; font-weight: 600; padding: 10px 16px; border-radius: 10px; transition: all 0.2s ease; font-size: 14px; }
-        .nav-item i { width: 18px; height: 18px; }
-        .nav-item:hover { background-color: #f1f5f9; color: var(--text-main); }
-        .nav-item.active { background-color: var(--primary); color: white; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2); }
-        .bottom-nav { border-top: 1px solid var(--border-light); padding-top: 10px; margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
-
-        .main-content { margin-left: 260px; padding: 40px 50px; flex-grow: 1; width: calc(100% - 260px); box-sizing: border-box; }
-        .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px; }
-        .header h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
-        
-        .user-profile { display: flex; align-items: center; gap: 12px; background: white; padding: 6px 16px 6px 6px; border-radius: 50px; border: 1px solid var(--border-light); }
-        .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--text-main); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; object-fit: cover;}
-
-        .card { background: var(--card-bg); padding: 24px; border-radius: 16px; border: 1px solid var(--border-light); margin-bottom: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .form-row { display: flex; gap: 15px; margin-bottom: 15px; flex-wrap: wrap; align-items: center;}
-        input { flex: 1; padding: 12px 16px; border: 1px solid var(--border-light); border-radius: 10px; font-family: 'Inter', sans-serif; font-size: 14px; outline: none; background: #f8fafc; }
-        .btn-primary { padding: 12px 24px; border: none; border-radius: 10px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; color: white; background-color: var(--primary); display: flex; align-items: center; gap: 8px; }
-        .table-container { width: 100%; overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; text-align: left; }
-        th { padding: 16px; color: var(--text-muted); font-weight: 600; font-size: 13px; text-transform: uppercase; border-bottom: 1px solid var(--border-light); }
-        td { padding: 16px; border-bottom: 1px solid #f1f5f9; font-size: 14px; vertical-align: middle; }
-        .btn-outline { background: white; border: 1px solid var(--border-light); padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; color: var(--text-main); display: inline-flex; align-items: center; gap: 6px; }
-        .btn-sell { background: var(--accent-blue); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
-    </style>
 </head>
 <body>
-    <div class="sidebar">
-        <div class="logo-container">
-            <img src="{{ url_for('static', filename='logo.png') }}?v=2" alt="FoodLoop" class="logo-img">
-            <span class="brand-name">FoodLoop</span>
-        </div>
-        <div class="nav-menu">
-            <span class="nav-section">Core</span>
-            <a href="{{ url_for('main.dashboard') }}" class="nav-item"><i data-lucide="layout-dashboard"></i> Overview</a>
-            <a href="{{ url_for('main.inventory') }}" class="nav-item"><i data-lucide="package"></i> Magazzino</a>
-            <span class="nav-section">Operatività</span>
-            <a href="{{ url_for('main.menu') }}" class="nav-item active"><i data-lucide="book-open"></i> Menu Planner</a>
-            <a href="{{ url_for('main.suppliers') }}" class="nav-item"><i data-lucide="shopping-cart"></i> Fornitori & Ordini</a>
-            <span class="nav-section">AI Tools</span>
-            <a href="{{ url_for('main.invoice_scanner') }}" class="nav-item"><i data-lucide="scan-line"></i> Invoice Scanner</a>
-        </div>
-        <div class="bottom-nav">
-            <span class="nav-section">Business</span>
-            <a href="{{ url_for('main.analytics') }}" class="nav-item"><i data-lucide="pie-chart"></i> Reports & Analysis</a>
-            <span class="nav-section">Impostazioni</span>
-            <a href="{{ url_for('main.profile') }}" class="nav-item"><i data-lucide="user"></i> Account</a>
-            <a href="{{ url_for('main.settings') }}" class="nav-item"><i data-lucide="settings"></i> Gestione Team</a>
-            <a href="{{ url_for('auth.logout') }}" class="nav-item" style="color: #ef4444; margin-top: 10px;"><i data-lucide="log-out"></i> Logout</a>
-        </div>
-    </div>
+    {% set sidebar_active = 'menu' %}
+    {% include 'components/sidebar.html' %}
 
     <div class="main-content">
-        <div class="header">
-            <div><h1>Menu Planner</h1><p>Gestisci i piatti e registra le vendite.</p></div>
-            <div class="user-profile">
-                {% if current_user.profile_image and current_user.profile_image != 'default' %}
-                    <img src="{{ url_for('static', filename='avatars/' + current_user.profile_image) }}" class="avatar" alt="Avatar">
-                {% else %}
-                    <div class="avatar">{{ current_user.full_name[0] | upper }}</div>
-                {% endif %}
-                <div style="display: flex; flex-direction: column;"><span style="font-weight: 600; font-size: 13px;">{{ current_user.full_name }}</span><span style="font-size: 11px; color: var(--text-muted);">{{ current_user.get_restaurant_name }}</span></div>
+        <div class="page-header">
+            <div class="page-title">
+                <h1>Menu Planner</h1>
+                <p>Gestisci i piatti, le ricette e registra le vendite.</p>
             </div>
+            {% include 'components/user_pill.html' %}
         </div>
 
+        {% include 'components/flash_messages.html' %}
+
+        <!-- Add Dish -->
         <div class="card">
-            <form action="{{ url_for('main.add_menu_item') }}" method="POST" class="form-row">
-                <input type="text" name="name" placeholder="Nome Piatto" required>
-                <input type="number" step="0.01" name="price" placeholder="Prezzo (€)" required style="flex: 0.5;">
-                <button type="submit" class="btn-primary"><i data-lucide="plus"></i> Aggiungi</button>
+            <div class="card-header">
+                <div class="card-icon"><i data-lucide="plus-square"></i></div>
+                <h3>Nuovo Piatto</h3>
+            </div>
+            <form action="{{ url_for('main.add_menu_item') }}" method="POST">
+                <div class="form-row">
+                    <input type="text"   name="name"  placeholder="Nome del piatto" required style="flex: 3;">
+                    <input type="number" step="0.01" name="price" placeholder="Prezzo €" required>
+                    <button type="submit" class="btn btn-primary">
+                        <i data-lucide="save"></i> Crea
+                    </button>
+                </div>
             </form>
         </div>
 
+        <!-- Menu Table -->
         <div class="card">
+            <div class="card-header">
+                <div class="card-icon"><i data-lucide="book-open"></i></div>
+                <h3>Menu Attuale</h3>
+                <span class="badge badge-muted">{{ menu_items | length }} piatti</span>
+            </div>
             <div class="table-container">
                 <table>
-                    <thead><tr><th>Piatto</th><th>Prezzo</th><th>Azioni</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th>Piatto</th>
+                            <th>Prezzo</th>
+                            <th>Ingredienti</th>
+                            <th>Azioni</th>
+                        </tr>
+                    </thead>
                     <tbody>
                         {% for item in menu_items %}
                         <tr>
-                            <td style="font-weight:600;">{{ item.name }}</td>
-                            <td>€{{ "%.2f"|format(item.price) }}</td>
+                            <td class="text-bold">{{ item.name }}</td>
+                            <td style="color: var(--primary); font-weight: 700;">€ {{ "%.2f"|format(item.price) }}</td>
                             <td>
-                                <a href="{{ url_for('main.recipe', item_id=item.id) }}" class="btn-outline"><i data-lucide="file-edit" style="width:14px;"></i> Ricetta</a>
-                                <form action="{{ url_for('main.sell_item', item_id=item.id) }}" method="POST" style="display:inline;">
-                                    <button type="submit" class="btn-sell"><i data-lucide="receipt" style="width:14px;"></i> Vendi</button>
-                                </form>
+                                {% if item.recipe_items %}
+                                    <span class="badge badge-success">
+                                        <i data-lucide="check-circle"></i> {{ item.recipe_items | length }} ingredienti
+                                    </span>
+                                {% else %}
+                                    <span class="badge badge-warning">
+                                        <i data-lucide="alert-triangle"></i> Ricetta mancante
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="flex gap-8">
+                                    <a href="{{ url_for('main.recipe', item_id=item.id) }}"
+                                       class="btn btn-secondary btn-sm">
+                                        <i data-lucide="edit-3"></i> Ricetta
+                                    </a>
+                                    <form action="{{ url_for('main.sell_item', item_id=item.id) }}" method="POST">
+                                        <button type="submit" class="btn btn-primary btn-sm">
+                                            <i data-lucide="shopping-bag"></i> Vendi
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center text-muted" style="padding: 32px;">
+                                Nessun piatto nel menu. Aggiungine uno sopra!
                             </td>
                         </tr>
                         {% endfor %}

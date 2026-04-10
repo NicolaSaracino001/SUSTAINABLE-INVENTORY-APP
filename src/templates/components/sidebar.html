@@ -1,0 +1,59 @@
+<div class="sidebar">
+    <div class="logo-container">
+        <img src="{{ url_for('static', filename='logo.png') }}?v=2" alt="FoodLoop" class="logo-img">
+        <span class="brand-name">FoodLoop</span>
+    </div>
+
+    <nav class="nav-menu">
+        <span class="nav-section">Core</span>
+        <a href="{{ url_for('main.dashboard') }}"
+           class="nav-item {% if sidebar_active == 'dashboard' %}active{% endif %}">
+            <i data-lucide="layout-dashboard"></i> Overview
+        </a>
+        <a href="{{ url_for('main.inventory') }}"
+           class="nav-item {% if sidebar_active == 'inventory' %}active{% endif %}">
+            <i data-lucide="package"></i> Magazzino
+        </a>
+
+        <span class="nav-section">Operatività</span>
+        <a href="{{ url_for('main.menu') }}"
+           class="nav-item {% if sidebar_active == 'menu' %}active{% endif %}">
+            <i data-lucide="book-open"></i> Menu Planner
+        </a>
+        <a href="{{ url_for('main.suppliers') }}"
+           class="nav-item {% if sidebar_active == 'suppliers' %}active{% endif %}">
+            <i data-lucide="shopping-cart"></i> Fornitori & Ordini
+        </a>
+
+        <span class="nav-section">AI Tools</span>
+        <a href="{{ url_for('main.invoice_scanner') }}"
+           class="nav-item {% if sidebar_active == 'invoice_scanner' %}active{% endif %}">
+            <i data-lucide="scan-line"></i> Invoice Scanner
+        </a>
+    </nav>
+
+    <div class="bottom-nav">
+        <div class="nav-divider"></div>
+        <span class="nav-section">Business</span>
+        <a href="{{ url_for('main.analytics') }}"
+           class="nav-item {% if sidebar_active == 'analytics' %}active{% endif %}">
+            <i data-lucide="pie-chart"></i> Reports & Analysis
+        </a>
+
+        {% if current_user.role == 'owner' %}
+        <span class="nav-section">Impostazioni</span>
+        <a href="{{ url_for('main.profile') }}"
+           class="nav-item {% if sidebar_active == 'profile' %}active{% endif %}">
+            <i data-lucide="user"></i> Account
+        </a>
+        <a href="{{ url_for('main.settings') }}"
+           class="nav-item {% if sidebar_active == 'settings' %}active{% endif %}">
+            <i data-lucide="settings"></i> Gestione Team
+        </a>
+        {% endif %}
+
+        <a href="{{ url_for('auth.logout') }}" class="nav-item nav-item--danger" style="margin-top: 8px;">
+            <i data-lucide="log-out"></i> Logout
+        </a>
+    </div>
+</div>

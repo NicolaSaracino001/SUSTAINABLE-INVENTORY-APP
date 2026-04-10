@@ -3,104 +3,133 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FoodLoop - Fornitori</title>
+    <title>FoodLoop — Fornitori & Ordini</title>
     <link rel="icon" href="{{ url_for('static', filename='logo.png') }}?v=2" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/foodloop.css') }}">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        :root { --primary: #10b981; --sidebar-bg: #ffffff; --bg-color: #f8fafc; --card-bg: #ffffff; --text-main: #0f172a; --text-muted: #64748b; --border-light: #e2e8f0; }
-        body { font-family: 'Inter', sans-serif; margin: 0; background-color: var(--bg-color); color: var(--text-main); display: flex; min-height: 100vh; }
-        
-        .sidebar { width: 260px; background-color: var(--sidebar-bg); position: fixed; height: 100vh; left: 0; top: 0; border-right: 1px solid var(--border-light); display: flex; flex-direction: column; padding: 24px 20px; box-sizing: border-box; z-index: 1000; overflow-y: auto;}
-        .logo-container { display: flex; align-items: center; gap: 12px; margin-bottom: 30px; padding: 0 10px; }
-        .logo-img { height: 42px; width: 42px; border-radius: 12px; box-shadow: 0 4px 10px rgba(22, 163, 74, 0.2); }
-        .brand-name { font-size: 22px; font-weight: 800; color: var(--text-main); letter-spacing: -0.5px; }
-        
-        .nav-section { display: block; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin: 20px 0 8px 10px; letter-spacing: 0.8px; }
-        .nav-menu { display: flex; flex-direction: column; gap: 4px; flex-grow: 1; }
-        .nav-item { display: flex; align-items: center; gap: 12px; color: var(--text-muted); text-decoration: none; font-weight: 600; padding: 10px 16px; border-radius: 10px; transition: all 0.2s ease; font-size: 14px; }
-        .nav-item i { width: 18px; height: 18px; }
-        .nav-item:hover { background-color: #f1f5f9; color: var(--text-main); }
-        .nav-item.active { background-color: var(--primary); color: white; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2); }
-        .bottom-nav { border-top: 1px solid var(--border-light); padding-top: 10px; margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
-
-        .main-content { margin-left: 260px; padding: 40px 50px; flex-grow: 1; width: calc(100% - 260px); box-sizing: border-box; }
-        .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px; }
-        .header h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
-        
-        .user-profile { display: flex; align-items: center; gap: 12px; background: white; padding: 6px 16px 6px 6px; border-radius: 50px; border: 1px solid var(--border-light); }
-        .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--text-main); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; object-fit: cover;}
-
-        .layout-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-        .card { background: var(--card-bg); padding: 24px; border-radius: 16px; border: 1px solid var(--border-light); margin-bottom: 24px; }
-        input { width: 100%; padding: 12px 16px; border: 1px solid var(--border-light); border-radius: 10px; background: #f8fafc; margin-bottom: 10px; box-sizing: border-box;}
-        .btn-primary { width: 100%; padding: 12px; border: none; border-radius: 10px; font-weight: 600; color: white; background-color: var(--text-main); cursor: pointer; }
-        .btn-wa { background-color: #25D366; color: white; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; }
-        .order-list { font-family: monospace; font-size: 13px; background: #f8fafc; padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid var(--border-light); }
+        .order-block {
+            background: rgba(248,250,252,0.70);
+            border: 1px solid var(--border);
+            border-radius: var(--r-md);
+            padding: 18px;
+            margin-bottom: 14px;
+        }
+        .order-block h4 { margin: 0 0 10px; font-size: 15px; font-weight: 700; }
+        .order-list {
+            font-family: monospace;
+            font-size: 13px;
+            color: var(--text-2);
+            line-height: 1.8;
+            margin-bottom: 12px;
+            background: rgba(15,23,42,0.03);
+            padding: 10px 14px;
+            border-radius: var(--r-xs);
+        }
     </style>
 </head>
 <body>
-    <div class="sidebar">
-        <div class="logo-container">
-            <img src="{{ url_for('static', filename='logo.png') }}?v=2" alt="FoodLoop" class="logo-img">
-            <span class="brand-name">FoodLoop</span>
-        </div>
-        <div class="nav-menu">
-            <span class="nav-section">Core</span>
-            <a href="{{ url_for('main.dashboard') }}" class="nav-item"><i data-lucide="layout-dashboard"></i> Overview</a>
-            <a href="{{ url_for('main.inventory') }}" class="nav-item"><i data-lucide="package"></i> Magazzino</a>
-            <span class="nav-section">Operatività</span>
-            <a href="{{ url_for('main.menu') }}" class="nav-item"><i data-lucide="book-open"></i> Menu Planner</a>
-            <a href="{{ url_for('main.suppliers') }}" class="nav-item active"><i data-lucide="shopping-cart"></i> Fornitori & Ordini</a>
-            <span class="nav-section">AI Tools</span>
-            <a href="{{ url_for('main.invoice_scanner') }}" class="nav-item"><i data-lucide="scan-line"></i> Invoice Scanner</a>
-        </div>
-        <div class="bottom-nav">
-            <span class="nav-section">Business</span>
-            <a href="{{ url_for('main.analytics') }}" class="nav-item"><i data-lucide="pie-chart"></i> Reports & Analysis</a>
-            <span class="nav-section">Impostazioni</span>
-            <a href="{{ url_for('main.profile') }}" class="nav-item"><i data-lucide="user"></i> Account</a>
-            <a href="{{ url_for('main.settings') }}" class="nav-item"><i data-lucide="settings"></i> Gestione Team</a>
-            <a href="{{ url_for('auth.logout') }}" class="nav-item" style="color: #ef4444; margin-top: 10px;"><i data-lucide="log-out"></i> Logout</a>
-        </div>
-    </div>
+    {% set sidebar_active = 'suppliers' %}
+    {% include 'components/sidebar.html' %}
 
     <div class="main-content">
-        <div class="header">
-            <div><h1>Shopping & Suppliers</h1><p>Gestisci rubrica e ordini automatici.</p></div>
-            <div class="user-profile">
-                {% if current_user.profile_image and current_user.profile_image != 'default' %}
-                    <img src="{{ url_for('static', filename='avatars/' + current_user.profile_image) }}" class="avatar" alt="Avatar">
-                {% else %}
-                    <div class="avatar">{{ current_user.full_name[0] | upper }}</div>
-                {% endif %}
-                <div style="display: flex; flex-direction: column;"><span style="font-weight: 600; font-size: 13px;">{{ current_user.full_name }}</span><span style="font-size: 11px; color: var(--text-muted);">{{ current_user.get_restaurant_name }}</span></div>
+        <div class="page-header">
+            <div class="page-title">
+                <h1>Fornitori & Ordini</h1>
+                <p>Gestisci la rubrica fornitori e genera ordini automatici.</p>
             </div>
+            {% include 'components/user_pill.html' %}
         </div>
 
-        <div class="layout-grid">
+        {% include 'components/flash_messages.html' %}
+
+        <div class="grid-2">
+            <!-- Rubrica Fornitori -->
             <div>
                 <div class="card">
-                    <h3>Aggiungi Fornitore</h3>
+                    <div class="card-header">
+                        <div class="card-icon"><i data-lucide="plus-square"></i></div>
+                        <h3>Aggiungi Fornitore</h3>
+                    </div>
                     <form action="{{ url_for('main.add_supplier') }}" method="POST">
-                        <input type="text" name="name" placeholder="Nome Azienda" required>
-                        <input type="text" name="contact" placeholder="Contatto" required>
-                        <button type="submit" class="btn-primary">Salva</button>
+                        <div class="form-row" style="flex-direction: column; gap: 10px;">
+                            <input type="text" name="name"    placeholder="Nome Azienda / Fornitore" required>
+                            <input type="text" name="contact" placeholder="Email o Telefono" required>
+                            <button type="submit" class="btn btn-primary" style="align-self: flex-start;">
+                                <i data-lucide="save"></i> Salva
+                            </button>
+                        </div>
                     </form>
                 </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon"><i data-lucide="truck"></i></div>
+                        <h3>Rubrica</h3>
+                        <span class="badge badge-muted">{{ suppliers | length }}</span>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr><th>Fornitore</th><th>Contatto</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for s in suppliers %}
+                                <tr>
+                                    <td class="text-bold">{{ s.name }}</td>
+                                    <td class="text-muted">{{ s.contact_info }}</td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="2" class="text-center text-muted" style="padding: 24px;">
+                                        Nessun fornitore ancora.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
+
+            <!-- Ordini Automatici -->
             <div>
                 <div class="card">
-                    <h3>Liste Spesa Automatiche</h3>
+                    <div class="card-header">
+                        <div class="card-icon" style="background: #dcfce7; color: #15803d;">
+                            <i data-lucide="shopping-cart"></i>
+                        </div>
+                        <h3>Liste Spesa Automatiche</h3>
+                        {% if auto_orders %}
+                        <span class="badge badge-warning">{{ auto_orders | length }} ordini</span>
+                        {% endif %}
+                    </div>
+
                     {% if auto_orders %}
                         {% for sup_name, data in auto_orders.items() %}
-                        <div style="border: 1px solid var(--border-light); padding:15px; border-radius:12px; margin-bottom:15px;">
-                            <h4 style="margin-top:0;">Per: {{ sup_name }}</h4>
-                            <div class="order-list">{% for item in data['items_list'] %}• {{ item.suggested }} {{ item.unit }} di {{ item.name }}<br>{% endfor %}</div>
-                            <button class="btn-wa" onclick="navigator.clipboard.writeText({{ data.wa_text|tojson|safe }})"><i data-lucide="message-circle"></i> Copia WhatsApp</button>
+                        <div class="order-block">
+                            <h4><i data-lucide="truck" style="width:15px;height:15px;margin-right:6px;color:var(--primary);"></i>{{ sup_name }}</h4>
+                            <div class="order-list">
+                                {%- for item in data['items'] -%}
+• {{ item.suggested }} {{ item.unit }} di {{ item.name }}
+                                {% endfor %}
+                            </div>
+                            <button class="btn btn-wa btn-sm"
+                                    onclick="navigator.clipboard.writeText({{ data.wa_text | tojson | safe }}).then(() => this.innerHTML = '<i data-lucide=\'check\'></i> Copiato!'); lucide.createIcons();">
+                                <i data-lucide="message-circle"></i> Copia per WhatsApp
+                            </button>
                         </div>
                         {% endfor %}
-                    {% else %}<p style="color:var(--primary); font-weight:600;">Tutto in ordine!</p>{% endif %}
+                    {% else %}
+                        <div class="flex flex-col items-center text-center" style="padding: 40px 0; gap: 12px;">
+                            <i data-lucide="check-circle" style="width: 40px; height: 40px; color: var(--primary);"></i>
+                            <div>
+                                <p class="text-bold" style="color: var(--primary); margin-bottom: 4px;">Tutto in ordine!</p>
+                                <p class="text-muted text-sm">Nessun prodotto sotto soglia minima.</p>
+                            </div>
+                        </div>
+                    {% endif %}
                 </div>
             </div>
         </div>

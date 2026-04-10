@@ -1,0 +1,12 @@
+<div class="user-pill">
+    {% if current_user.profile_image and current_user.profile_image != 'default' %}
+        <img src="{{ url_for('static', filename='avatars/' + current_user.profile_image) }}"
+             class="avatar" alt="Avatar">
+    {% else %}
+        <div class="avatar">{{ current_user.full_name[0] | upper }}</div>
+    {% endif %}
+    <div class="user-info">
+        <span class="user-name">{{ current_user.full_name }}</span>
+        <span class="user-restaurant">{{ current_user.get_restaurant_name }}</span>
+    </div>
+</div>

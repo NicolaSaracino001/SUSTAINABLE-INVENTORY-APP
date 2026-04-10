@@ -1,0 +1,17 @@
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+<div class="flash-messages">
+    {% for m in messages %}
+        {% if '❌' in m or 'Errore' in m or 'negato' in m %}
+            <div class="flash-msg flash-error"><i data-lucide="x-circle"></i> {{ m }}</div>
+        {% elif '⚠️' in m %}
+            <div class="flash-msg flash-warning"><i data-lucide="alert-triangle"></i> {{ m }}</div>
+        {% elif 'ℹ️' in m or '⏳' in m %}
+            <div class="flash-msg flash-info"><i data-lucide="info"></i> {{ m }}</div>
+        {% else %}
+            <div class="flash-msg flash-success"><i data-lucide="check-circle-2"></i> {{ m }}</div>
+        {% endif %}
+    {% endfor %}
+</div>
+{% endif %}
+{% endwith %}

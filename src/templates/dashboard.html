@@ -3,105 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FoodLoop - Overview</title>
+    <title>FoodLoop — Overview</title>
     <link rel="icon" href="{{ url_for('static', filename='logo.png') }}?v=2" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/foodloop.css') }}">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        :root { --primary: #10b981; --sidebar-bg: #ffffff; --bg-color: #f8fafc; --card-bg: #ffffff; --text-main: #0f172a; --text-muted: #64748b; --border-light: #e2e8f0; }
-        body { font-family: 'Inter', sans-serif; margin: 0; background-color: var(--bg-color); color: var(--text-main); display: flex; min-height: 100vh; }
-        .sidebar { width: 260px; background-color: var(--sidebar-bg); position: fixed; height: 100vh; left: 0; top: 0; border-right: 1px solid var(--border-light); display: flex; flex-direction: column; padding: 24px 20px; box-sizing: border-box; z-index: 1000; overflow-y: auto;}
-        .logo-container { display: flex; align-items: center; gap: 12px; margin-bottom: 30px; padding: 0 10px; }
-        .logo-img { height: 42px; width: 42px; border-radius: 12px; box-shadow: 0 4px 10px rgba(22, 163, 74, 0.2); }
-        .brand-name { font-size: 22px; font-weight: 800; color: var(--text-main); letter-spacing: -0.5px; }
-        .nav-section { display: block; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin: 20px 0 8px 10px; letter-spacing: 0.8px; }
-        .nav-menu { display: flex; flex-direction: column; gap: 4px; flex-grow: 1; }
-        .nav-item { display: flex; align-items: center; gap: 12px; color: var(--text-muted); text-decoration: none; font-weight: 600; padding: 10px 16px; border-radius: 10px; transition: all 0.2s ease; font-size: 14px; }
-        .nav-item i { width: 18px; height: 18px; }
-        .nav-item:hover { background-color: #f1f5f9; color: var(--text-main); }
-        .nav-item.active { background-color: var(--primary); color: white; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2); }
-        .bottom-nav { border-top: 1px solid var(--border-light); padding-top: 10px; margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
-        .main-content { margin-left: 260px; padding: 40px 50px; flex-grow: 1; width: calc(100% - 260px); box-sizing: border-box; }
-        .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px; }
-        .header h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
-        .header p { margin: 6px 0 0 0; color: var(--text-muted); font-size: 15px; }
-        .user-profile { display: flex; align-items: center; gap: 12px; background: white; padding: 6px 16px 6px 6px; border-radius: 50px; border: 1px solid var(--border-light); }
-        .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--text-main); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; object-fit: cover; }
-        .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 30px; }
-        .stat-card { padding: 24px; border-radius: 16px; color: white; box-shadow: 0 4px 15px rgba(0,0,0,0.05); display: flex; flex-direction: column; justify-content: space-between; }
-        .card-green { background: linear-gradient(135deg, #10b981 0%, #047857 100%); }
-        .card-blue { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
-        .card-dark { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); }
-        .stat-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; opacity: 0.9;}
-        .stat-value { font-size: 32px; font-weight: 700; margin: 0; letter-spacing: -0.5px; }
-        .charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
-        .card { background: var(--card-bg); padding: 24px; border-radius: 16px; border: 1px solid var(--border-light); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .chart-container { position: relative; height: 300px; width: 100%; }
-        .alert-list { list-style: none; padding: 0; margin: 0; }
-        .alert-item { padding: 16px; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; }
-        .alert-icon { width: 36px; height: 36px; border-radius: 10px; background: #fef2f2; color: #ef4444; display: flex; align-items: center; justify-content: center; }
-        .badge-danger { background: white; color: #ef4444; border: 1px solid #fca5a5; padding: 4px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; }
-    </style>
 </head>
 <body>
-    <div class="sidebar">
-        <div class="logo-container">
-            <img src="{{ url_for('static', filename='logo.png') }}?v=2" alt="FoodLoop" class="logo-img">
-            <span class="brand-name">FoodLoop</span>
-        </div>
-        <div class="nav-menu">
-            <span class="nav-section">Core</span>
-            <a href="{{ url_for('main.dashboard') }}" class="nav-item active"><i data-lucide="layout-dashboard"></i> Overview</a>
-            <a href="{{ url_for('main.inventory') }}" class="nav-item"><i data-lucide="package"></i> Magazzino</a>
-            <span class="nav-section">Operatività</span>
-            <a href="{{ url_for('main.menu') }}" class="nav-item"><i data-lucide="book-open"></i> Menu Planner</a>
-            <a href="{{ url_for('main.suppliers') }}" class="nav-item"><i data-lucide="shopping-cart"></i> Fornitori & Ordini</a>
-            <span class="nav-section">AI Tools</span>
-            <a href="{{ url_for('main.invoice_scanner') }}" class="nav-item"><i data-lucide="scan-line"></i> Invoice Scanner</a>
-        </div>
-        <div class="bottom-nav">
-            <span class="nav-section">Business</span>
-            <a href="{{ url_for('main.analytics') }}" class="nav-item"><i data-lucide="pie-chart"></i> Reports & Analysis</a>
-            <span class="nav-section">Impostazioni</span>
-            <a href="{{ url_for('main.profile') }}" class="nav-item"><i data-lucide="user"></i> Account</a>
-            <a href="{{ url_for('main.settings') }}" class="nav-item"><i data-lucide="settings"></i> Gestione Team</a>
-            <a href="{{ url_for('auth.logout') }}" class="nav-item" style="color: #ef4444; margin-top: 10px;"><i data-lucide="log-out"></i> Logout</a>
-        </div>
-    </div>
+    {% set sidebar_active = 'dashboard' %}
+    {% include 'components/sidebar.html' %}
+
     <div class="main-content">
-        <div class="header">
-            <div><h1>Overview</h1><p>Benvenuto in FoodLoop. Ecco lo stato del tuo locale.</p></div>
-            <div class="user-profile">
-                {% if current_user.profile_image and current_user.profile_image != 'default' %}
-                    <img src="{{ url_for('static', filename='avatars/' + current_user.profile_image) }}" class="avatar" alt="Avatar">
-                {% else %}
-                    <div class="avatar">{{ current_user.full_name[0] | upper }}</div>
-                {% endif %}
-                <div style="display: flex; flex-direction: column;"><span style="font-weight: 600; font-size: 13px;">{{ current_user.full_name }}</span><span style="font-size: 11px; color: var(--text-muted);">{{ name }}</span></div>
+        <div class="page-header">
+            <div class="page-title">
+                <h1>Overview</h1>
+                <p>Benvenuto in FoodLoop — ecco lo stato del tuo locale.</p>
+            </div>
+            {% include 'components/user_pill.html' %}
+        </div>
+
+        {% include 'components/flash_messages.html' %}
+
+        <!-- Stat Cards -->
+        <div class="stats-grid">
+            <div class="stat-card stat-card-green">
+                <i data-lucide="wallet" class="stat-icon"></i>
+                <span class="stat-label">Inventory Value</span>
+                <span class="stat-value">€ {{ total_value }}</span>
+            </div>
+            <div class="stat-card stat-card-blue">
+                <i data-lucide="pie-chart" class="stat-icon"></i>
+                <span class="stat-label">Budget Used</span>
+                <span class="stat-value">{{ budget_percent }}%</span>
+            </div>
+            <div class="stat-card stat-card-dark">
+                <i data-lucide="cpu" class="stat-icon"></i>
+                <span class="stat-label">AI Status</span>
+                <span class="stat-value" style="font-size: 15px; font-weight: 500; line-height: 1.4;">{{ weather_suggestion }}</span>
             </div>
         </div>
-        <div class="stats-grid">
-            <div class="stat-card card-green"><div class="stat-header"><h3>Inventory Value</h3><i data-lucide="wallet"></i></div><p class="stat-value">€ {{ total_value }}</p></div>
-            <div class="stat-card card-blue"><div class="stat-header"><h3>Budget Used</h3><i data-lucide="pie-chart"></i></div><p class="stat-value">{{ budget_percent }}%</p></div>
-            <div class="stat-card card-dark"><div class="stat-header"><h3>AI Status</h3><i data-lucide="cpu" style="color: #10b981;"></i></div><p class="stat-value" style="font-size: 16px; font-weight: 500;">{{ weather_suggestion }}</p></div>
-        </div>
-        <div class="charts-grid">
-            <div class="card"><h3>Inventory Stock Levels</h3><div class="chart-container"><canvas id="inventoryChart"></canvas></div></div>
-            <div class="card"><h3>Stock Alerts</h3><ul class="alert-list">
-                {% for p in low_stock %}<li class="alert-item"><div style="display:flex; align-items:center; gap:12px;"><div class="alert-icon"><i data-lucide="alert-triangle"></i></div><div><span style="font-weight:600; font-size:14px;">{{ p.name }}</span></div></div><span class="badge-danger">{{ p.quantity }} {{ p.unit }}</span></li>
-                {% else %}<li class="alert-item" style="justify-content:center; color:#10b981; padding:40px 0;"><i data-lucide="check-circle" style="width:32px;height:32px;margin-bottom:10px;"></i><span style="font-weight:600;">All Optimal</span></li>{% endfor %}
-            </ul></div>
+
+        <!-- Charts + Alerts -->
+        <div class="grid-auto">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon"><i data-lucide="bar-chart-2"></i></div>
+                    <h3>Stock Levels</h3>
+                </div>
+                <div class="chart-wrap">
+                    <canvas id="inventoryChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon" style="background: #fef2f2; color: #ef4444;">
+                        <i data-lucide="alert-triangle"></i>
+                    </div>
+                    <h3>Stock Alerts</h3>
+                    {% if low_stock %}
+                    <span class="badge badge-danger">{{ low_stock | length }}</span>
+                    {% endif %}
+                </div>
+                <ul class="alert-list">
+                    {% for p in low_stock %}
+                    <li class="alert-item">
+                        <div class="flex items-center gap-12">
+                            <div class="alert-icon"><i data-lucide="alert-triangle"></i></div>
+                            <span class="text-bold" style="font-size: 14px;">{{ p.name }}</span>
+                        </div>
+                        <span class="badge badge-danger">{{ p.quantity }} {{ p.unit }}</span>
+                    </li>
+                    {% else %}
+                    <li class="alert-item" style="justify-content: center; padding: 32px 0; flex-direction: column; gap: 10px;">
+                        <i data-lucide="check-circle" style="width: 32px; height: 32px; color: var(--primary); margin: 0 auto;"></i>
+                        <span class="text-muted text-center" style="font-weight: 600;">Tutti i prodotti sono ottimali</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
         </div>
     </div>
+
     <script>
         lucide.createIcons();
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const ctx = document.getElementById('inventoryChart').getContext('2d');
             new Chart(ctx, {
                 type: 'bar',
-                data: { labels: {{ chart_labels|tojson|safe }}, datasets: [{ label: 'Stock', data: {{ chart_values|tojson|safe }}, backgroundColor: '#3b82f6', borderRadius: 4 }, { label: 'Min', data: {{ chart_thresholds|tojson|safe }}, type: 'line', borderColor: '#ef4444', borderWidth: 2, borderDash: [5, 5], fill: false }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: '#f1f5f9' } }, x: { grid: { display: false } } } }
+                data: {
+                    labels: {{ chart_labels | tojson | safe }},
+                    datasets: [
+                        {
+                            label: 'Giacenza',
+                            data: {{ chart_values | tojson | safe }},
+                            backgroundColor: 'rgba(16, 185, 129, 0.75)',
+                            borderRadius: 6,
+                            borderSkipped: false,
+                        },
+                        {
+                            label: 'Soglia Min',
+                            data: {{ chart_thresholds | tojson | safe }},
+                            type: 'line',
+                            borderColor: '#ef4444',
+                            borderWidth: 2,
+                            borderDash: [6, 4],
+                            pointRadius: 0,
+                            fill: false,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: 'rgba(226,232,240,0.6)' }, ticks: { color: '#94a3b8', font: { family: 'Inter', size: 12 } } },
+                        x: { grid: { display: false }, ticks: { color: '#64748b', font: { family: 'Inter', size: 12 } } }
+                    }
+                }
             });
         });
     </script>

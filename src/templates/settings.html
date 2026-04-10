@@ -3,270 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FoodLoop - Impostazioni Staff</title>
+    <title>FoodLoop — Gestione Team</title>
     <link rel="icon" href="{{ url_for('static', filename='logo.png') }}?v=2" type="image/png">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/foodloop.css') }}">
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        :root { 
-            --primary: #10b981; 
-            --primary-dark: #059669; 
-            --sidebar-bg: #ffffff;
-            --bg-color: #f8fafc; 
-            --card-bg: #ffffff; 
-            --text-main: #0f172a; 
-            --text-muted: #64748b; 
-            --border-light: #e2e8f0;
+        .form-group { margin-bottom: 14px; }
+        .form-group label {
+            display: block; font-size: 11px; font-weight: 600;
+            color: var(--text-4); text-transform: uppercase;
+            letter-spacing: 0.5px; margin-bottom: 5px;
         }
-        
-        body { 
-            font-family: 'Inter', sans-serif; 
-            margin: 0; 
-            background-color: var(--bg-color); 
-            color: var(--text-main); 
-            display: flex;
-            min-height: 100vh;
-        }
+        .form-hint { font-size: 12px; color: var(--text-3); margin-top: 5px; }
 
-        /* SIDEBAR */
-        .sidebar {
-            width: 260px; background-color: var(--sidebar-bg); position: fixed;
-            height: 100vh; left: 0; top: 0; border-right: 1px solid var(--border-light);
-            display: flex; flex-direction: column; padding: 24px 20px;
-            box-sizing: border-box; z-index: 1000;
-        }
-
-        .logo-container { 
-            display: flex; align-items: center; gap: 12px; 
-            margin-bottom: 40px; padding: 0 10px; 
-        }
-        .logo-img { 
-            height: 42px; width: 42px; border-radius: 12px; 
-            box-shadow: 0 4px 10px rgba(22, 163, 74, 0.2); 
-        }
-        .brand-name {
-            font-size: 22px; font-weight: 800; color: var(--text-main); 
-            letter-spacing: -0.5px;
-        }
-
-        .nav-menu { display: flex; flex-direction: column; gap: 8px; flex-grow: 1; }
-
-        .nav-item {
+        .staff-list { list-style: none; display: flex; flex-direction: column; gap: 2px; }
+        .staff-item {
             display: flex; align-items: center; gap: 12px;
-            color: var(--text-muted); text-decoration: none;
-            font-weight: 600; padding: 12px 16px;
-            border-radius: 10px; transition: all 0.2s ease; font-size: 14px;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(226,232,240,0.50);
         }
-        .nav-item i { width: 20px; height: 20px; }
-        .nav-item:hover { background-color: #f1f5f9; color: var(--text-main); }
-        .nav-item.active { background-color: var(--primary); color: white; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2); }
-        .nav-item.bottom-active { background-color: #f1f5f9; color: var(--primary); }
-
-        .bottom-nav { border-top: 1px solid var(--border-light); padding-top: 20px; display: flex; flex-direction: column; gap: 8px; }
-
-        /* AREA CENTRALE */
-        .main-content {
-            margin-left: 260px; padding: 40px 50px;
-            flex-grow: 1; width: calc(100% - 260px); box-sizing: border-box;
-        }
-
-        .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px; }
-        .header h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
-        .header p { margin: 6px 0 0 0; color: var(--text-muted); font-size: 15px; }
-
-        .user-profile {
-            display: flex; align-items: center; gap: 12px;
-            background: white; padding: 6px 16px 6px 6px;
-            border-radius: 50px; border: 1px solid var(--border-light);
-        }
-        .avatar {
-            width: 32px; height: 32px; border-radius: 50%;
-            background: var(--text-main); color: white; 
+        .staff-item:last-child { border-bottom: none; }
+        .staff-avatar {
+            width: 38px; height: 38px; border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white; font-weight: 700; font-size: 14px;
             display: flex; align-items: center; justify-content: center;
-            font-weight: 600; font-size: 14px;
-        }
-
-        /* CARDS */
-        .layout-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-        @media (max-width: 900px) { .layout-grid { grid-template-columns: 1fr; } }
-
-        .card { 
-            background: var(--card-bg); padding: 30px; border-radius: 16px; 
-            border: 1px solid var(--border-light); margin-bottom: 24px; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
-        .card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #f1f5f9;}
-        .card-header h3 { margin: 0; font-size: 18px; color: var(--text-main); }
-
-        /* FORM */
-        .form-group { margin-bottom: 15px; }
-        label { display: block; font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; }
-        input { 
-            width: 100%; padding: 12px 16px; border: 1px solid var(--border-light); 
-            border-radius: 10px; font-family: 'Inter', sans-serif; font-size: 14px; 
-            outline: none; transition: all 0.2s; box-sizing: border-box; background: #f8fafc; 
-        }
-        input:focus { border-color: var(--primary); background: white; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1); }
-        
-        .btn-primary { 
-            width: 100%; padding: 12px 20px; border: none; border-radius: 10px; cursor: pointer; 
-            font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; 
-            color: white; background-color: var(--text-main); 
-            display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; margin-top: 10px;
-        }
-        .btn-primary:hover { background-color: black; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
-
-        /* LISTA STAFF */
-        .staff-list { list-style: none; padding: 0; margin: 0; }
-        .staff-item { 
-            padding: 16px; border: 1px solid var(--border-light); border-radius: 12px; 
-            margin-bottom: 12px; background: #f8fafc; display: flex; align-items: center; gap: 16px;
-        }
-        .staff-icon {
-            width: 40px; height: 40px; border-radius: 50%; background: #e2e8f0; color: var(--text-muted);
-            display: flex; align-items: center; justify-content: center; font-weight: 700;
+            flex-shrink: 0;
         }
         .staff-info { flex-grow: 1; }
-        .staff-info strong { display: block; font-size: 15px; margin-bottom: 4px; color: var(--text-main);}
-        .staff-info span { font-size: 13px; color: var(--text-muted); }
-        .badge-staff { background: #dbeafe; color: #1e40af; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; text-transform: uppercase;}
-
-        .flash-msg { padding: 16px; margin-bottom: 24px; border-radius: 10px; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 10px; background-color: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
-        .flash-error { background-color: #fef2f2; color: #b91c1c; border-color: #fecaca; }
-        .empty-state { text-align: center; color: var(--text-muted); padding: 40px 20px; font-size: 14px; display: flex; flex-direction: column; align-items: center; gap: 12px;}
+        .staff-name { font-size: 14px; font-weight: 600; color: var(--text-1); }
+        .staff-email { font-size: 12px; color: var(--text-3); }
     </style>
 </head>
 <body>
-
-    <div class="sidebar">
-        <div class="logo-container">
-            <img src="{{ url_for('static', filename='logo.png') }}?v=2" alt="FoodLoop" class="logo-img">
-            <span class="brand-name">FoodLoop</span>
-        </div>
-        
-        <div class="nav-menu">
-            <a href="{{ url_for('main.dashboard') }}" class="nav-item">
-                <i data-lucide="layout-dashboard"></i> Overview
-            </a>
-            <a href="{{ url_for('main.inventory') }}" class="nav-item">
-                <i data-lucide="package"></i> Inventory
-            </a>
-            <a href="{{ url_for('main.menu') }}" class="nav-item">
-                <i data-lucide="book-open"></i> Menu Planner
-            </a>
-            <a href="{{ url_for('main.suppliers') }}" class="nav-item">
-                <i data-lucide="shopping-cart"></i> Shopping & Suppliers
-            </a>
-            <span class="nav-section">AI Tools</span>
-            <a href="{{ url_for('main.invoice_scanner') }}" class="nav-item"><i data-lucide="scan-line"></i> Invoice Scanner</a>
-        </div>
-
-        <div class="bottom-nav">
-            {% if current_user.role == 'owner' %}
-                <a href="{{ url_for('main.analytics') }}" class="nav-item">
-                    <i data-lucide="pie-chart"></i> Reports & Analysis
-                </a>
-                <a href="{{ url_for('main.profile') }}" class="nav-item">
-                    <i data-lucide="user"></i> Account
-                </a>
-                <a href="{{ url_for('main.settings') }}" class="nav-item bottom-active">
-                    <i data-lucide="settings"></i> Settings
-                </a>
-            {% endif %}
-            <a href="{{ url_for('auth.logout') }}" class="nav-item" style="color: #ef4444;">
-                <i data-lucide="log-out"></i> Logout
-            </a>
-        </div>
-    </div>
+    {% set sidebar_active = 'settings' %}
+    {% include 'components/sidebar.html' %}
 
     <div class="main-content">
-        <div class="header">
-            <div>
-                <h1>Impostazioni Staff</h1>
-                <p>Aggiungi membri del team e gestisci gli accessi al tuo magazzino.</p>
+        <div class="page-header">
+            <div class="page-title">
+                <h1>Gestione Team</h1>
+                <p>Aggiungi dipendenti e gestisci i loro accessi al sistema.</p>
             </div>
-            <div class="user-profile">
-                <div class="avatar">{{ current_user.full_name[0] | upper }}</div>
-                <div style="display: flex; flex-direction: column;">
-                    <span style="font-weight: 600; font-size: 13px;">{{ current_user.full_name }}</span>
-                    <span style="font-size: 11px; color: var(--text-muted);">{{ current_user.get_restaurant_name }}</span>
-                </div>
-            </div>
+            {% include 'components/user_pill.html' %}
         </div>
 
-        {% with messages = get_flashed_messages() %}
-          {% if messages %}
-            {% for message in messages %}
-              <div class="flash-msg {% if 'Errore' in message %}flash-error{% endif %}">
-                  <i data-lucide="{% if 'Errore' in message %}alert-circle{% else %}check-circle-2{% endif %}"></i> 
-                  {{ message }}
-              </div>
-            {% endfor %}
-          {% endif %}
-        {% endwith %}
+        {% include 'components/flash_messages.html' %}
 
-        <div class="layout-grid">
-            <div>
-                <div class="card">
-                    <div class="card-header">
-                        <i data-lucide="user-plus" style="color: var(--text-main);"></i>
-                        <h3>Crea Account Dipendente</h3>
-                    </div>
-                    <form action="{{ url_for('main.add_staff') }}" method="POST">
-                        <div class="form-group">
-                            <label>Nome Completo</label>
-                            <input type="text" name="full_name" placeholder="es. Luigi Bianchi" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Indirizzo Email</label>
-                            <input type="email" name="email" placeholder="luigi@ristorante.it" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Password Temporanea</label>
-                            <input type="password" name="password" placeholder="••••••••" required>
-                            <span style="font-size: 12px; color: var(--text-muted); display: block; margin-top: 6px;">
-                                Il dipendente dovrà cambiare questa password al primo accesso.
-                            </span>
-                        </div>
-                        <button type="submit" class="btn-primary">
-                            <i data-lucide="shield-check"></i> Autorizza Accesso
-                        </button>
-                    </form>
+        <div class="grid-2">
+            <!-- Crea Staff -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon"><i data-lucide="user-plus"></i></div>
+                    <h3>Crea Account Dipendente</h3>
                 </div>
+                <form action="{{ url_for('main.add_staff') }}" method="POST">
+                    <div class="form-group">
+                        <label>Nome Completo</label>
+                        <input type="text" name="full_name" placeholder="es. Luigi Bianchi" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Indirizzo Email</label>
+                        <input type="email" name="email" placeholder="luigi@ristorante.it" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password Temporanea</label>
+                        <input type="password" name="password" placeholder="••••••••" required>
+                        <p class="form-hint">Il dipendente dovrà cambiare questa password al primo accesso.</p>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i data-lucide="shield-check"></i> Autorizza Accesso
+                    </button>
+                </form>
             </div>
 
-            <div>
-                <div class="card">
-                    <div class="card-header">
-                        <i data-lucide="users" style="color: var(--primary);"></i>
-                        <h3>Team Operativo</h3>
-                    </div>
-                    <ul class="staff-list">
-                        {% for member in staff %}
-                        <li class="staff-item">
-                            <div class="staff-icon">
-                                {{ member.full_name[0] | upper }}
-                            </div>
-                            <div class="staff-info">
-                                <strong>{{ member.full_name }}</strong>
-                                <span>{{ member.email }}</span>
-                            </div>
-                            <span class="badge-staff">Staff</span>
-                        </li>
-                        {% else %}
-                        <div class="empty-state">
-                            <i data-lucide="users" style="width: 32px; height: 32px; color: #cbd5e1;"></i>
-                            Nessun dipendente aggiunto. Crea il primo account per delegare il lavoro!
-                        </div>
-                        {% endfor %}
-                    </ul>
+            <!-- Lista Staff -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon"><i data-lucide="users"></i></div>
+                    <h3>Team Operativo</h3>
+                    <span class="badge badge-muted">{{ staff | length }} membri</span>
                 </div>
+                {% if staff %}
+                <ul class="staff-list">
+                    {% for member in staff %}
+                    <li class="staff-item">
+                        <div class="staff-avatar">{{ member.full_name[0] | upper }}</div>
+                        <div class="staff-info">
+                            <div class="staff-name">{{ member.full_name }}</div>
+                            <div class="staff-email">{{ member.email }}</div>
+                        </div>
+                        <span class="badge badge-muted">Staff</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="flex flex-col items-center text-center" style="padding: 40px 0; gap: 12px;">
+                    <i data-lucide="users" style="width: 40px; height: 40px; color: var(--text-4);"></i>
+                    <div>
+                        <p class="text-bold text-muted" style="margin-bottom: 4px;">Nessun dipendente ancora</p>
+                        <p class="text-muted text-sm">Crea il primo account per delegare il lavoro.</p>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
-
-    <script>
-        lucide.createIcons();
-    </script>
+    <script>lucide.createIcons();</script>
 </body>
 </html>
