@@ -160,6 +160,9 @@
             <a href="{{ url_for('main.suppliers') }}" class="nav-item">
                 <i data-lucide="shopping-cart"></i> Shopping & Suppliers
             </a>
+            <a href="{{ url_for('main.invoice_scanner') }}" class="nav-item">
+                <i data-lucide="scan-line"></i> Invoice Scanner
+            </a>
         </div>
         <div class="bottom-nav">
             {% if current_user.role == 'owner' %}

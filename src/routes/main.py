@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, current_app, session
 from flask_login import login_required, current_user
 from src.models.models import MenuItem, RecipeItem, Product, ConsumptionLog, User, Supplier, WasteLog, db
 from datetime import datetime
@@ -9,6 +9,7 @@ import io
 import os
 import uuid
 import json
+import time
 import google.generativeai as genai
 import urllib.parse
 import requests
@@ -510,3 +511,309 @@ def update_avatar():
             flash("Errore durante la generazione dell'avatar.")
 
     return redirect(url_for('main.profile'))
+
+
+# ---> FASE 37: AI INVOICE SCANNER <---
+
+@main.route('/invoice_scanner')
+@login_required
+def invoice_scanner():
+    """Pagina principale: upload form + visualizzazione risultati scan."""
+    result_id = session.get('invoice_scan_result_id')
+    scan_result = None
+    if result_id:
+        result_path = os.path.join(current_app.root_path, 'static', 'invoice_tmp', f'result_{result_id}.json')
+        if os.path.exists(result_path):
+            with open(result_path, 'r') as f:
+                scan_result = json.load(f)
+    products = Product.query.filter_by(user_id=current_user.get_restaurant_id).all()
+    return render_template('invoice_scanner.html', scan_result=scan_result, products=products)
+
+
+@main.route('/scan_invoice', methods=['POST'])
+@login_required
+def scan_invoice():
+    """Riceve il file, lo manda a Gemini Vision, salva il JSON estratto."""
+    import base64
+    import logging
+
+    # --- Logging terminale ---
+    logger = logging.getLogger('foodloop.invoice')
+    logging.basicConfig(level=logging.INFO, format='[FoodLoop] %(levelname)s: %(message)s')
+
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        flash("❌ Errore: Manca la chiave API di Gemini nel file .env!")
+        return redirect(url_for('main.invoice_scanner'))
+
+    if 'invoice_file' not in request.files or request.files['invoice_file'].filename == '':
+        flash("❌ Nessun file selezionato. Carica un'immagine o un PDF della fattura.")
+        return redirect(url_for('main.invoice_scanner'))
+
+    file = request.files['invoice_file']
+    ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+    mime_map = {
+        'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
+        'png': 'image/png', 'webp': 'image/webp',
+        'pdf': 'application/pdf'
+    }
+    if ext not in mime_map:
+        flash("❌ Formato non supportato. Carica un file JPG, PNG, WEBP o PDF.")
+        return redirect(url_for('main.invoice_scanner'))
+
+    mime_type = mime_map[ext]
+    is_pdf = ext == 'pdf'
+
+    # Salva file temporaneo
+    upload_folder = os.path.join(current_app.root_path, 'static', 'invoice_tmp')
+    os.makedirs(upload_folder, exist_ok=True)
+    filename = f"inv_{current_user.id}_{uuid.uuid4().hex}.{ext}"
+    filepath = os.path.join(upload_folder, filename)
+    file.save(filepath)
+    logger.info(f"File salvato temporaneamente: {filepath} ({mime_type})")
+
+    try:
+        genai.configure(api_key=api_key)
+
+        # --- SELEZIONE DINAMICA MODELLO (priorità ai modelli Flash più recenti) ---
+        PREFERRED_VISION = [
+            'models/gemini-2.0-flash',
+            'models/gemini-2.5-flash',
+            'models/gemini-2.0-flash-001',
+            'models/gemini-2.0-flash-lite',
+            'models/gemini-flash-latest',
+        ]
+        available = []
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                available.append(m.name)
+
+        logger.info(f"Modelli disponibili ({len(available)}): {available[:8]}...")
+
+        model_name = None
+        for preferred in PREFERRED_VISION:
+            if preferred in available:
+                model_name = preferred
+                break
+        if not model_name and available:
+            # Fallback: primo modello gemini disponibile (escludi gemma)
+            for m in available:
+                if 'gemini' in m and 'gemma' not in m:
+                    model_name = m
+                    break
+        if not model_name:
+            flash("❌ Nessun modello Gemini disponibile per questa API key.")
+            return redirect(url_for('main.invoice_scanner'))
+
+        logger.info(f"Modello selezionato: {model_name}")
+        model = genai.GenerativeModel(model_name)
+
+        prompt = """Sei un sistema OCR professionale specializzato in fatture di fornitura per ristoranti.
+Analizza questo documento e estrai TUTTI i dati strutturati nel seguente formato JSON esatto.
+
+Regole:
+- "quantity" e "unit_price" devono essere numeri decimali (es. 2.5, non "2,5")
+- Se un campo non e' leggibile, usa null
+- "unit" deve essere l'unita' di misura (kg, l, pz, conf, ecc.)
+- Includi TUTTI i prodotti/articoli presenti nella fattura
+
+Rispondi ESCLUSIVAMENTE con il JSON puro, senza markdown, senza commenti, senza testo aggiuntivo:
+{
+  "supplier_name": "nome del fornitore",
+  "invoice_date": "data in formato YYYY-MM-DD o stringa leggibile",
+  "invoice_number": "numero fattura se presente",
+  "products": [
+    {
+      "name": "nome prodotto",
+      "quantity": 0.0,
+      "unit": "kg",
+      "unit_price": 0.0
+    }
+  ]
+}"""
+
+        if is_pdf:
+            # PDF: usa Files API (unico modo senza librerie aggiuntive)
+            logger.info("Modalità PDF: upload via Files API...")
+            uploaded_file = genai.upload_file(path=filepath, mime_type=mime_type)
+            logger.info(f"File caricato su Gemini: {uploaded_file.name} | stato: {getattr(uploaded_file, 'state', 'N/A')}")
+
+            max_wait = 30
+            waited = 0
+            while hasattr(uploaded_file, 'state') and uploaded_file.state.name == "PROCESSING" and waited < max_wait:
+                time.sleep(2)
+                waited += 2
+                uploaded_file = genai.get_file(uploaded_file.name)
+                logger.info(f"Attesa elaborazione PDF... {waited}s | stato: {uploaded_file.state.name}")
+
+            if hasattr(uploaded_file, 'state') and uploaded_file.state.name == "FAILED":
+                flash("❌ Gemini non è riuscito a elaborare il PDF. Prova a convertirlo in immagine JPG.")
+                return redirect(url_for('main.invoice_scanner'))
+
+            content_parts = [prompt, uploaded_file]
+
+            # Cleanup Gemini file dopo la chiamata
+            def cleanup_gemini_file(fname):
+                try:
+                    genai.delete_file(fname)
+                    logger.info(f"File Gemini eliminato: {fname}")
+                except Exception as ce:
+                    logger.warning(f"Impossibile eliminare file Gemini {fname}: {ce}")
+
+        else:
+            # IMMAGINE: inline base64 — non usa Files API, più affidabile
+            logger.info(f"Modalità immagine: invio inline base64 ({mime_type})...")
+            with open(filepath, 'rb') as f_img:
+                raw_bytes = f_img.read()
+            b64_data = base64.b64encode(raw_bytes).decode('utf-8')
+            logger.info(f"Dimensione immagine: {len(raw_bytes)} bytes")
+
+            content_parts = [
+                prompt,
+                {"inline_data": {"mime_type": mime_type, "data": b64_data}}
+            ]
+            cleanup_gemini_file = None  # Non c'è file su Gemini da eliminare
+
+        logger.info(f"Invio richiesta a Gemini [{model_name}]...")
+        response = model.generate_content(content_parts)
+        logger.info(f"Risposta ricevuta. Lunghezza raw: {len(response.text)} caratteri")
+        logger.info(f"Raw Gemini response (primi 500 chars): {response.text[:500]}")
+
+        if cleanup_gemini_file:
+            cleanup_gemini_file(uploaded_file.name)
+
+        raw_text = response.text.replace('```json', '').replace('```', '').strip()
+        scan_data = json.loads(raw_text)
+        logger.info(f"JSON parsato correttamente. Prodotti trovati: {len(scan_data.get('products', []))}")
+
+        # Salva risultato in file JSON temporaneo
+        result_id = uuid.uuid4().hex
+        result_path = os.path.join(upload_folder, f'result_{result_id}.json')
+        with open(result_path, 'w', encoding='utf-8') as f:
+            json.dump(scan_data, f, ensure_ascii=False)
+
+        # Rimuovi eventuale vecchio risultato
+        old_result_id = session.get('invoice_scan_result_id')
+        if old_result_id:
+            old_path = os.path.join(upload_folder, f'result_{old_result_id}.json')
+            try:
+                os.remove(old_path)
+            except Exception:
+                pass
+
+        session['invoice_scan_result_id'] = result_id
+
+        n_products = len(scan_data.get('products', []))
+        supplier = scan_data.get('supplier_name', 'Fornitore sconosciuto')
+        flash(f"✅ Fattura analizzata con {model_name.split('/')[-1]}! Trovati {n_products} prodotti da {supplier}.")
+
+    except json.JSONDecodeError as je:
+        logger.error(f"JSON decode error: {je}. Raw text: {response.text if 'response' in dir() else 'N/A'}")
+        flash("❌ Gemini non ha restituito un JSON valido. Riprova con un'immagine più nitida o leggibile.")
+    except Exception as e:
+        err_str = str(e)
+        logger.error(f"Errore scan_invoice: {type(e).__name__}: {e}")
+        if 'RESOURCE_EXHAUSTED' in err_str or 'quota' in err_str.lower():
+            flash("⏳ Quota API momentaneamente esaurita (free tier). Attendi 30 secondi e riprova.")
+        elif '404' in err_str or 'not found' in err_str.lower():
+            flash(f"❌ Modello AI non trovato (404). Controlla la chiave GEMINI_API_KEY nel file .env.")
+        else:
+            flash(f"❌ Errore durante l'analisi AI: {type(e).__name__}: {str(e)}")
+    finally:
+        try:
+            os.remove(filepath)
+            logger.info(f"File temporaneo locale eliminato: {filepath}")
+        except Exception:
+            pass
+
+    return redirect(url_for('main.invoice_scanner'))
+
+
+@main.route('/clear_invoice_scan')
+@login_required
+def clear_invoice_scan():
+    """Elimina il risultato di scansione corrente dalla sessione."""
+    result_id = session.pop('invoice_scan_result_id', None)
+    if result_id:
+        upload_folder = os.path.join(current_app.root_path, 'static', 'invoice_tmp')
+        result_path = os.path.join(upload_folder, f'result_{result_id}.json')
+        try:
+            os.remove(result_path)
+        except Exception:
+            pass
+    return redirect(url_for('main.invoice_scanner'))
+
+
+@main.route('/apply_invoice_update', methods=['POST'])
+@login_required
+def apply_invoice_update():
+    """Applica gli aggiornamenti selezionati dall'utente alla tabella Product."""
+    result_id = session.pop('invoice_scan_result_id', None)
+    if not result_id:
+        flash("❌ Nessun risultato di scansione trovato. Ricarica una fattura.")
+        return redirect(url_for('main.invoice_scanner'))
+
+    upload_folder = os.path.join(current_app.root_path, 'static', 'invoice_tmp')
+    result_path = os.path.join(upload_folder, f'result_{result_id}.json')
+
+    try:
+        with open(result_path, 'r', encoding='utf-8') as f:
+            scan_data = json.load(f)
+    except Exception:
+        flash("❌ Dati di scansione non trovati. Ricarica la fattura.")
+        return redirect(url_for('main.invoice_scanner'))
+    finally:
+        try:
+            os.remove(result_path)
+        except Exception:
+            pass
+
+    scanned_products = scan_data.get('products', [])
+    selected_indices = request.form.getlist('selected_products')
+    rest_id = current_user.get_restaurant_id
+    db_products = Product.query.filter_by(user_id=rest_id).all()
+
+    updated_count = 0
+    not_found = []
+
+    for idx_str in selected_indices:
+        idx = int(idx_str)
+        if idx >= len(scanned_products):
+            continue
+
+        scanned = scanned_products[idx]
+        scanned_name = (scanned.get('name') or '').lower().strip()
+
+        # Match esatto (case-insensitive)
+        matched = next((p for p in db_products if p.name.lower().strip() == scanned_name), None)
+
+        # Match parziale se nessun esatto
+        if not matched:
+            matched = next(
+                (p for p in db_products if scanned_name in p.name.lower() or p.name.lower() in scanned_name),
+                None
+            )
+
+        if matched:
+            update_qty = request.form.get(f'update_qty_{idx}') == 'on'
+            update_price = request.form.get(f'update_price_{idx}') == 'on'
+
+            if update_qty and scanned.get('quantity') is not None:
+                matched.quantity += float(scanned['quantity'])
+            if update_price and scanned.get('unit_price') is not None:
+                matched.unit_cost = float(scanned['unit_price'])
+
+            updated_count += 1
+        else:
+            not_found.append(scanned.get('name', '?'))
+
+    db.session.commit()
+
+    if updated_count > 0:
+        flash(f"✅ Magazzino aggiornato! {updated_count} prodotti aggiornati dalla fattura.")
+    if not_found:
+        flash(f"⚠️ Non trovati in magazzino (aggiungi manualmente): {', '.join(not_found)}")
+    if updated_count == 0 and not not_found:
+        flash("ℹ️ Nessun prodotto selezionato per l'aggiornamento.")
+
+    return redirect(url_for('main.invoice_scanner'))

@@ -79,12 +79,14 @@
             <span class="nav-section">Operatività</span>
             <a href="{{ url_for('main.menu') }}" class="nav-item"><i data-lucide="book-open"></i> Menu Planner</a>
             <a href="{{ url_for('main.suppliers') }}" class="nav-item"><i data-lucide="shopping-cart"></i> Fornitori & Ordini</a>
+            <span class="nav-section">AI Tools</span>
+            <a href="{{ url_for('main.invoice_scanner') }}" class="nav-item"><i data-lucide="scan-line"></i> Invoice Scanner</a>
         </div>
 
         <div class="bottom-nav">
             <span class="nav-section">Business</span>
             <a href="{{ url_for('main.analytics') }}" class="nav-item"><i data-lucide="pie-chart"></i> Reports & Analysis</a>
-            
+
             <span class="nav-section">Impostazioni</span>
             <a href="{{ url_for('main.profile') }}" class="nav-item active"><i data-lucide="user"></i> Account</a>
             <a href="{{ url_for('main.settings') }}" class="nav-item"><i data-lucide="settings"></i> Gestione Team</a>

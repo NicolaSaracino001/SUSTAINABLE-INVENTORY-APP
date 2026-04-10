@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FoodLoop - AI Invoice Scanner</title>
+    <link rel="icon" href="{{ url_for('static', filename='logo.png') }}?v=2" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root { --primary: #10b981; --sidebar-bg: #ffffff; --bg-color: #f8fafc; --card-bg: #ffffff; --text-main: #0f172a; --text-muted: #64748b; --border-light: #e2e8f0; }
+        body { font-family: 'Inter', sans-serif; margin: 0; background-color: var(--bg-color); color: var(--text-main); display: flex; min-height: 100vh; }
+
+        .sidebar { width: 260px; background-color: var(--sidebar-bg); position: fixed; height: 100vh; left: 0; top: 0; border-right: 1px solid var(--border-light); display: flex; flex-direction: column; padding: 24px 20px; box-sizing: border-box; z-index: 1000; overflow-y: auto; }
+        .logo-container { display: flex; align-items: center; gap: 12px; margin-bottom: 30px; padding: 0 10px; }
+        .logo-img { height: 42px; width: 42px; border-radius: 12px; box-shadow: 0 4px 10px rgba(22, 163, 74, 0.2); }
+        .brand-name { font-size: 22px; font-weight: 800; color: var(--text-main); letter-spacing: -0.5px; }
+        .nav-section { display: block; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin: 20px 0 8px 10px; letter-spacing: 0.8px; }
+        .nav-menu { display: flex; flex-direction: column; gap: 4px; flex-grow: 1; }
+        .nav-item { display: flex; align-items: center; gap: 12px; color: var(--text-muted); text-decoration: none; font-weight: 600; padding: 10px 16px; border-radius: 10px; transition: all 0.2s ease; font-size: 14px; }
+        .nav-item i { width: 18px; height: 18px; }
+        .nav-item:hover { background-color: #f1f5f9; color: var(--text-main); }
+        .nav-item.active { background-color: var(--primary); color: white; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2); }
+        .bottom-nav { border-top: 1px solid var(--border-light); padding-top: 10px; margin-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+
+        .main-content { margin-left: 260px; padding: 40px 50px; flex-grow: 1; width: calc(100% - 260px); box-sizing: border-box; }
+        .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 30px; }
+        .header h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+        .header p { margin: 6px 0 0 0; color: var(--text-muted); font-size: 15px; }
+        .user-profile { display: flex; align-items: center; gap: 12px; background: white; padding: 6px 16px 6px 6px; border-radius: 50px; border: 1px solid var(--border-light); }
+        .avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--text-main); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; object-fit: cover; }
+
+        .card { background: var(--card-bg); padding: 24px; border-radius: 16px; border: 1px solid var(--border-light); margin-bottom: 30px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+        .card-header h3 { margin: 0; font-size: 16px; font-weight: 700; color: var(--text-main); }
+
+        .flash-msg { padding: 16px; margin-bottom: 24px; border-radius: 10px; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 10px; background-color: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+        .flash-msg.warn { background-color: #fffbeb; color: #92400e; border-color: #fde68a; }
+        .flash-msg.info { background-color: #eff6ff; color: #1e40af; border-color: #bfdbfe; }
+
+        /* Upload Zone */
+        .upload-zone { border: 2px dashed var(--border-light); border-radius: 16px; padding: 48px 24px; text-align: center; cursor: pointer; transition: all 0.2s; background: #f8fafc; }
+        .upload-zone:hover, .upload-zone.dragover { border-color: var(--primary); background: #f0fdf4; }
+        .upload-icon { width: 56px; height: 56px; margin: 0 auto 16px; background: linear-gradient(135deg, #10b981, #059669); border-radius: 16px; display: flex; align-items: center; justify-content: center; color: white; }
+        .upload-zone h4 { margin: 0 0 8px; font-size: 16px; font-weight: 700; color: var(--text-main); }
+        .upload-zone p { margin: 0; color: var(--text-muted); font-size: 13px; }
+        .file-input { display: none; }
+
+        .btn-primary { padding: 12px 24px; border: none; border-radius: 10px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; color: white; background-color: var(--primary); display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; }
+        .btn-primary:hover { background-color: #059669; }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-secondary { padding: 10px 18px; border: 1px solid var(--border-light); border-radius: 10px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; color: var(--text-muted); background: white; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; text-decoration: none; }
+        .btn-secondary:hover { background: #f1f5f9; color: var(--text-main); }
+
+        /* File Preview Banner */
+        .file-preview { display: none; align-items: center; gap: 12px; padding: 14px 18px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; margin-top: 16px; }
+        .file-preview.show { display: flex; }
+        .file-preview span { font-size: 14px; font-weight: 600; color: #15803d; }
+
+        /* Loading State */
+        .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,0.5); z-index: 9999; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
+        .loading-overlay.show { display: flex; }
+        .spinner { width: 48px; height: 48px; border: 4px solid rgba(255,255,255,0.2); border-top-color: #10b981; border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text { color: white; font-size: 15px; font-weight: 600; }
+
+        /* Results Table */
+        .invoice-meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+        .meta-item { background: #f8fafc; border: 1px solid var(--border-light); border-radius: 12px; padding: 16px; }
+        .meta-label { font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; }
+        .meta-value { font-size: 15px; font-weight: 700; color: var(--text-main); }
+
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th { padding: 14px 16px; color: var(--text-muted); font-weight: 600; font-size: 12px; text-transform: uppercase; border-bottom: 1px solid var(--border-light); letter-spacing: 0.5px; }
+        td { padding: 14px 16px; border-bottom: 1px solid #f1f5f9; font-size: 14px; vertical-align: middle; }
+        tr:last-child td { border-bottom: none; }
+
+        .match-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+        .match-found { background: #dcfce7; color: #166534; }
+        .match-missing { background: #fee2e2; color: #991b1b; }
+
+        .toggle-group { display: flex; gap: 8px; }
+        .toggle-label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--text-muted); cursor: pointer; }
+        input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
+
+        .ai-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: linear-gradient(135deg, #10b981, #059669); color: white; border-radius: 20px; font-size: 12px; font-weight: 700; }
+
+        .form-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border-light); }
+        .select-all-area { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<!-- Loading overlay durante analisi AI -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <div class="loading-text">Gemini AI sta analizzando la fattura...</div>
+    <div style="color: rgba(255,255,255,0.6); font-size: 13px;">Potrebbe richiedere qualche secondo</div>
+</div>
+
+<div class="sidebar">
+    <div class="logo-container">
+        <img src="{{ url_for('static', filename='logo.png') }}?v=2" alt="FoodLoop" class="logo-img">
+        <span class="brand-name">FoodLoop</span>
+    </div>
+    <div class="nav-menu">
+        <span class="nav-section">Core</span>
+        <a href="{{ url_for('main.dashboard') }}" class="nav-item"><i data-lucide="layout-dashboard"></i> Overview</a>
+        <a href="{{ url_for('main.inventory') }}" class="nav-item"><i data-lucide="package"></i> Magazzino</a>
+        <span class="nav-section">Operatività</span>
+        <a href="{{ url_for('main.menu') }}" class="nav-item"><i data-lucide="book-open"></i> Menu Planner</a>
+        <a href="{{ url_for('main.suppliers') }}" class="nav-item"><i data-lucide="shopping-cart"></i> Fornitori & Ordini</a>
+        <span class="nav-section">AI Tools</span>
+        <a href="{{ url_for('main.invoice_scanner') }}" class="nav-item active"><i data-lucide="scan-line"></i> Invoice Scanner</a>
+    </div>
+    <div class="bottom-nav">
+        <span class="nav-section">Business</span>
+        <a href="{{ url_for('main.analytics') }}" class="nav-item"><i data-lucide="pie-chart"></i> Reports & Analysis</a>
+        <span class="nav-section">Impostazioni</span>
+        <a href="{{ url_for('main.profile') }}" class="nav-item"><i data-lucide="user"></i> Account</a>
+        <a href="{{ url_for('main.settings') }}" class="nav-item"><i data-lucide="settings"></i> Gestione Team</a>
+        <a href="{{ url_for('auth.logout') }}" class="nav-item" style="color: #ef4444; margin-top: 10px;"><i data-lucide="log-out"></i> Logout</a>
+    </div>
+</div>
+
+<div class="main-content">
+    <div class="header">
+        <div>
+            <h1>AI Invoice Scanner</h1>
+            <p>Carica una fattura — Gemini AI estrae i dati e aggiorna il magazzino automaticamente.</p>
+        </div>
+        <div class="user-profile">
+            {% if current_user.profile_image and current_user.profile_image != 'default' %}
+                <img src="{{ url_for('static', filename='avatars/' + current_user.profile_image) }}" class="avatar" alt="Avatar">
+            {% else %}
+                <div class="avatar">{{ current_user.full_name[0] | upper }}</div>
+            {% endif %}
+            <div style="display: flex; flex-direction: column;">
+                <span style="font-weight: 600; font-size: 13px;">{{ current_user.full_name }}</span>
+                <span style="font-size: 11px; color: var(--text-muted);">{{ current_user.get_restaurant_name }}</span>
+            </div>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for m in messages %}
+                {% if '⚠️' in m %}
+                    <div class="flash-msg warn"><i data-lucide="alert-triangle"></i> {{ m }}</div>
+                {% elif 'ℹ️' in m %}
+                    <div class="flash-msg info"><i data-lucide="info"></i> {{ m }}</div>
+                {% else %}
+                    <div class="flash-msg"><i data-lucide="check-circle-2"></i> {{ m }}</div>
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <!-- Upload Card -->
+    <div class="card">
+        <div class="card-header">
+            <i data-lucide="upload-cloud" style="color: var(--primary); width: 22px; height: 22px;"></i>
+            <h3>Carica Fattura</h3>
+            <span class="ai-badge"><i data-lucide="sparkles" style="width:14px;height:14px;"></i> Powered by Gemini AI</span>
+        </div>
+
+        <form action="{{ url_for('main.scan_invoice') }}" method="POST" enctype="multipart/form-data" id="uploadForm">
+            <div class="upload-zone" id="uploadZone" onclick="document.getElementById('invoiceFile').click()">
+                <div class="upload-icon">
+                    <i data-lucide="file-scan" style="width: 28px; height: 28px;"></i>
+                </div>
+                <h4>Trascina qui la fattura o clicca per selezionarla</h4>
+                <p>Formati supportati: JPG, PNG, WEBP, PDF &bull; Max 20MB</p>
+            </div>
+            <input type="file" name="invoice_file" id="invoiceFile" class="file-input" accept=".jpg,.jpeg,.png,.webp,.pdf">
+
+            <div class="file-preview" id="filePreview">
+                <i data-lucide="file-check" style="color: var(--primary); width: 20px; height: 20px;"></i>
+                <span id="fileName">Nessun file</span>
+            </div>
+
+            <div style="margin-top: 20px; display: flex; gap: 12px; align-items: center;">
+                <button type="submit" class="btn-primary" id="scanBtn" disabled>
+                    <i data-lucide="cpu"></i> Analizza con AI
+                </button>
+                <span style="font-size: 13px; color: var(--text-muted);">Gemini 1.5 Flash analizzerà la fattura e estrarrà i dati automaticamente.</span>
+            </div>
+        </form>
+    </div>
+
+    <!-- Results Card (visible only when scan_result is present) -->
+    {% if scan_result %}
+    <div class="card">
+        <div class="card-header">
+            <i data-lucide="clipboard-list" style="color: var(--primary); width: 22px; height: 22px;"></i>
+            <h3>Risultati Analisi</h3>
+            <span class="ai-badge"><i data-lucide="check-circle" style="width:14px;height:14px;"></i> Estratto da Gemini</span>
+        </div>
+
+        <!-- Metadati Fattura -->
+        <div class="invoice-meta">
+            <div class="meta-item">
+                <div class="meta-label">Fornitore</div>
+                <div class="meta-value">{{ scan_result.supplier_name or '—' }}</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">Data Fattura</div>
+                <div class="meta-value">{{ scan_result.invoice_date or '—' }}</div>
+            </div>
+            <div class="meta-item">
+                <div class="meta-label">N° Fattura</div>
+                <div class="meta-value">{{ scan_result.invoice_number or '—' }}</div>
+            </div>
+        </div>
+
+        <!-- Tabella Prodotti con form aggiornamento -->
+        <form action="{{ url_for('main.apply_invoice_update') }}" method="POST" id="updateForm">
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;">
+                                <input type="checkbox" id="selectAll" title="Seleziona tutti">
+                            </th>
+                            <th>Prodotto (dalla fattura)</th>
+                            <th>Qtà</th>
+                            <th>Unità</th>
+                            <th>Prezzo Unit.</th>
+                            <th>Match Magazzino</th>
+                            <th>Aggiorna</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in scan_result.products %}
+                        {% set i = loop.index0 %}
+                        <tr>
+                            <td>
+                                <input type="checkbox" name="selected_products" value="{{ i }}" class="product-check" checked>
+                            </td>
+                            <td style="font-weight: 600;">{{ item.name or '—' }}</td>
+                            <td>{{ item.quantity if item.quantity is not none else '—' }}</td>
+                            <td style="color: var(--text-muted);">{{ item.unit or '—' }}</td>
+                            <td>
+                                {% if item.unit_price is not none %}
+                                    <span style="font-weight: 700; color: var(--primary);">€ {{ "%.2f"|format(item.unit_price) }}</span>
+                                {% else %}
+                                    <span style="color: var(--text-muted);">—</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% set ns = namespace(found=false, match_name='') %}
+                                {% for p in products %}
+                                    {% if item.name and (p.name|lower == item.name|lower or (item.name|lower in p.name|lower) or (p.name|lower in item.name|lower)) %}
+                                        {% set ns.found = true %}
+                                        {% set ns.match_name = p.name %}
+                                    {% endif %}
+                                {% endfor %}
+                                {% if ns.found %}
+                                    <span class="match-badge match-found"><i data-lucide="check" style="width:11px;height:11px;"></i> {{ ns.match_name }}</span>
+                                {% else %}
+                                    <span class="match-badge match-missing"><i data-lucide="x" style="width:11px;height:11px;"></i> Non trovato</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="toggle-group">
+                                    <label class="toggle-label" title="Aggiungi questa quantità alla giacenza attuale">
+                                        <input type="checkbox" name="update_qty_{{ i }}" {% if item.quantity is not none %}checked{% endif %}>
+                                        +Qtà
+                                    </label>
+                                    <label class="toggle-label" title="Aggiorna il costo unitario nel magazzino">
+                                        <input type="checkbox" name="update_price_{{ i }}" {% if item.unit_price is not none %}checked{% endif %}>
+                                        Prezzo
+                                    </label>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="form-actions">
+                <label class="select-all-area">
+                    <input type="checkbox" id="selectAllBottom" checked> Seleziona / Deseleziona tutti
+                </label>
+                <div style="display: flex; gap: 12px;">
+                    <a href="{{ url_for('main.clear_invoice_scan') }}" class="btn-secondary">
+                        <i data-lucide="trash-2"></i> Scarta
+                    </a>
+                    <button type="submit" class="btn-primary">
+                        <i data-lucide="database"></i> Aggiorna Magazzino
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Legenda -->
+    <div style="display: flex; gap: 24px; padding: 0 4px; margin-top: -10px; margin-bottom: 20px;">
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted);">
+            <span class="match-badge match-found" style="font-size:11px;">Match trovato</span>
+            Il prodotto esiste in magazzino e verrà aggiornato
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-muted);">
+            <span class="match-badge match-missing" style="font-size:11px;">Non trovato</span>
+            Il prodotto non è in magazzino — aggiungilo manualmente
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Info Card (quando non ci sono risultati) -->
+    {% if not scan_result %}
+    <div class="card" style="background: linear-gradient(135deg, #f0fdf4, #dcfce7); border-color: #bbf7d0;">
+        <div style="display: flex; gap: 20px; align-items: flex-start;">
+            <div style="width: 48px; height: 48px; min-width: 48px; background: var(--primary); border-radius: 14px; display: flex; align-items: center; justify-content: center; color: white;">
+                <i data-lucide="info" style="width: 24px; height: 24px;"></i>
+            </div>
+            <div>
+                <h4 style="margin: 0 0 10px; font-size: 15px; color: #065f46;">Come funziona il AI Invoice Scanner</h4>
+                <ol style="margin: 0; padding-left: 20px; color: #047857; font-size: 14px; line-height: 1.8;">
+                    <li>Carica l'immagine o il PDF della fattura del tuo fornitore</li>
+                    <li>Gemini AI analizza il documento e estrae: Fornitore, Data, Prodotti, Quantità e Prezzi</li>
+                    <li>Rivedi i dati estratti e seleziona quali prodotti aggiornare</li>
+                    <li>Clicca "Aggiorna Magazzino" — le giacenze e i prezzi vengono aggiornati automaticamente</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    lucide.createIcons();
+
+    // File input e drag & drop
+    const invoiceFile = document.getElementById('invoiceFile');
+    const uploadZone = document.getElementById('uploadZone');
+    const filePreview = document.getElementById('filePreview');
+    const fileName = document.getElementById('fileName');
+    const scanBtn = document.getElementById('scanBtn');
+
+    invoiceFile.addEventListener('change', function() {
+        if (this.files.length > 0) {
+            fileName.textContent = this.files[0].name;
+            filePreview.classList.add('show');
+            scanBtn.disabled = false;
+        }
+    });
+
+    uploadZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.classList.add('dragover');
+    });
+
+    uploadZone.addEventListener('dragleave', function() {
+        this.classList.remove('dragover');
+    });
+
+    uploadZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            invoiceFile.files = files;
+            fileName.textContent = files[0].name;
+            filePreview.classList.add('show');
+            scanBtn.disabled = false;
+        }
+    });
+
+    // Mostra loading overlay durante il submit
+    document.getElementById('uploadForm').addEventListener('submit', function() {
+        document.getElementById('loadingOverlay').classList.add('show');
+    });
+
+    // Select All checkbox logica
+    function syncSelectAll() {
+        const checkboxes = document.querySelectorAll('.product-check');
+        const selectAll = document.getElementById('selectAll');
+        const selectAllBottom = document.getElementById('selectAllBottom');
+        if (!selectAll) return;
+        const allChecked = [...checkboxes].every(c => c.checked);
+        selectAll.checked = allChecked;
+        if (selectAllBottom) selectAllBottom.checked = allChecked;
+    }
+
+    const selectAll = document.getElementById('selectAll');
+    const selectAllBottom = document.getElementById('selectAllBottom');
+
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            document.querySelectorAll('.product-check').forEach(c => c.checked = this.checked);
+            if (selectAllBottom) selectAllBottom.checked = this.checked;
+        });
+    }
+
+    if (selectAllBottom) {
+        selectAllBottom.addEventListener('change', function() {
+            document.querySelectorAll('.product-check').forEach(c => c.checked = this.checked);
+            if (selectAll) selectAll.checked = this.checked;
+        });
+    }
+
+    document.querySelectorAll('.product-check').forEach(c => {
+        c.addEventListener('change', syncSelectAll);
+    });
+</script>
+</body>
+</html>
