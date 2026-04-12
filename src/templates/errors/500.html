@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FoodLoop — Errore interno</title>
+    <link rel="icon" href="{{ url_for('static', filename='logo.png') }}?v=2" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/foodloop.css') }}">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .error-card {
+            text-align: center;
+            max-width: 480px;
+            padding: 56px 48px;
+            background: var(--surface);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--r-xl);
+            box-shadow: var(--shadow-lg);
+            animation: fadeInUp var(--t-slow) var(--ease-out) both;
+        }
+        .error-icon-ring {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 80px; height: 80px;
+            border-radius: 50%;
+            background: rgba(239, 68, 68, 0.08);
+            border: 2px solid rgba(239, 68, 68, 0.18);
+            margin-bottom: 28px;
+        }
+        .error-icon-ring i { width: 36px; height: 36px; color: var(--accent-red); }
+        .error-code {
+            font-size: 72px; font-weight: 900;
+            color: var(--accent-red);
+            line-height: 1;
+            letter-spacing: -3px;
+            margin-bottom: 8px;
+        }
+        .error-title {
+            font-size: 20px; font-weight: 700;
+            color: var(--text-1);
+            margin-bottom: 10px;
+        }
+        .error-desc {
+            font-size: 14px; color: var(--text-3);
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+        .error-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: rgba(239,68,68,0.07);
+            color: var(--accent-red);
+            border: 1px solid rgba(239,68,68,0.18);
+            padding: 5px 14px; border-radius: var(--r-full);
+            font-size: 12px; font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .error-actions {
+            display: flex; gap: 12px;
+            justify-content: center; flex-wrap: wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="error-card">
+        <div class="error-icon-ring">
+            <i data-lucide="server-crash"></i>
+        </div>
+        <div class="error-badge">
+            <i data-lucide="alert-triangle" style="width:13px;height:13px;"></i>
+            Errore interno del server
+        </div>
+        <div class="error-code">500</div>
+        <div class="error-title">Qualcosa è andato storto</div>
+        <p class="error-desc">
+            Si è verificato un errore imprevisto sul server.<br>
+            L'evento è stato registrato automaticamente. Riprova tra qualche istante.
+        </p>
+        <div class="error-actions">
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary">
+                <i data-lucide="layout-dashboard"></i>
+                Torna alla Dashboard
+            </a>
+            <a href="javascript:location.reload()" class="btn btn-secondary">
+                <i data-lucide="refresh-cw"></i>
+                Riprova
+            </a>
+        </div>
+    </div>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

@@ -414,11 +414,18 @@ def profile():
 @login_required
 @owner_required
 def update_budget():
-    new_budget = request.form.get('budget')
+    new_budget = request.form.get('budget', '').strip()
     if new_budget:
-        current_user.monthly_budget = float(new_budget)
-        db.session.commit()
-        flash("Budget Operativo aggiornato con successo! 🎮")
+        try:
+            budget_value = float(new_budget)
+            if budget_value < 0 or budget_value > 10_000_000:
+                flash("❌ Valore budget non valido (deve essere tra 0 e 10.000.000).")
+                return redirect(url_for('main.profile'))
+            current_user.monthly_budget = round(budget_value, 2)
+            db.session.commit()
+            flash("Budget Operativo aggiornato con successo!")
+        except ValueError:
+            flash("❌ Inserisci un numero valido per il budget (es. 1500.00).")
     return redirect(url_for('main.profile'))
 
 @main.route('/export_excel')
@@ -470,19 +477,26 @@ def add_staff():
 @main.route('/update_avatar', methods=['POST'])
 @login_required
 def update_avatar():
+    # Whitelist estensioni immagine — blocca upload di file eseguibili
+    ALLOWED_AVATAR_EXT = {'jpg', 'jpeg', 'png', 'gif', 'webp'}
+
     avatar_type = request.form.get('avatar_type')
-    
+
     if avatar_type == 'file':
         if 'avatar_file' in request.files and request.files['avatar_file'].filename != '':
             pic = request.files['avatar_file']
             filename = secure_filename(pic.filename)
-            unique_name = str(uuid.uuid4().hex) + "_" + filename
+            ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else ''
+            if ext not in ALLOWED_AVATAR_EXT:
+                flash("❌ Formato non supportato. Carica un'immagine JPG, PNG, GIF o WEBP.")
+                return redirect(url_for('main.profile'))
+            unique_name = f"{uuid.uuid4().hex}.{ext}"   # nome completamente anonimo
             upload_folder = os.path.join(current_app.root_path, 'static', 'avatars')
             os.makedirs(upload_folder, exist_ok=True)
             pic.save(os.path.join(upload_folder, unique_name))
             current_user.profile_image = unique_name
             db.session.commit()
-            flash("Foto profilo personalizzata caricata! 📸")
+            flash("Foto profilo personalizzata caricata!")
         else:
             flash("Nessuna foto selezionata.")
             
