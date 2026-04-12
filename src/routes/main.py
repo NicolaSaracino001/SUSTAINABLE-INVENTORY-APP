@@ -10,7 +10,8 @@ import os
 import uuid
 import json
 import time
-import google.generativeai as genai
+from google import genai as genai_sdk
+from google.genai import types as genai_types
 import urllib.parse
 import requests
 
@@ -292,33 +293,29 @@ def generate_recipe_ai(item_id):
     """
 
     try:
-        genai.configure(api_key=api_key)
-        
-        modello_scelto = None
-        for m in genai.list_models():
-            if 'generateContent' in m.supported_generation_methods:
-                modello_scelto = m.name
-                break
-                
-        if not modello_scelto:
-            flash("❌ Errore critico: Nessun modello AI disponibile per la tua API Key.")
-            return redirect(url_for('main.recipe', item_id=item_id))
-
-        model = genai.GenerativeModel(modello_scelto)
-        response = model.generate_content(prompt)
-        
+        client = genai_sdk.Client(api_key=api_key)
+        response = client.models.generate_content(
+            model='gemini-2.0-flash',
+            contents=prompt,
+            config=genai_types.GenerateContentConfig(
+                response_mime_type='application/json',
+            ),
+        )
         raw_text = response.text.replace('```json', '').replace('```', '').strip()
         suggested_items = json.loads(raw_text)
-        
+
         RecipeItem.query.filter_by(menu_item_id=item.id).delete()
-        
         for ing in suggested_items:
-            new_r_item = RecipeItem(menu_item_id=item.id, product_id=int(ing['product_id']), quantity_needed=float(ing['quantity']))
+            new_r_item = RecipeItem(
+                menu_item_id=item.id,
+                product_id=int(ing['product_id']),
+                quantity_needed=float(ing['quantity'])
+            )
             db.session.add(new_r_item)
-            
+
         db.session.commit()
-        flash(f"✨ Magia AI completata! (Modello ufficiale usato: {modello_scelto})")
-        
+        flash("✨ Ricetta AI generata con successo!")
+
     except Exception as e:
         flash(f"❌ Errore durante la generazione AI: Riprova. Dettaglio: {str(e)}")
 
@@ -534,7 +531,6 @@ def invoice_scanner():
 @login_required
 def scan_invoice():
     """Riceve il file, lo manda a Gemini Vision, salva il JSON estratto."""
-    import base64
     import logging
 
     # --- Logging terminale ---
@@ -572,115 +568,93 @@ def scan_invoice():
     file.save(filepath)
     logger.info(f"File salvato temporaneamente: {filepath} ({mime_type})")
 
+    gemini_file_ref = None   # traccia l'eventuale file caricato su Files API
+
     try:
-        genai.configure(api_key=api_key)
+        client = genai_sdk.Client(api_key=api_key)
 
-        # --- SELEZIONE DINAMICA MODELLO (priorità ai modelli Flash più recenti) ---
-        PREFERRED_VISION = [
-            'models/gemini-2.0-flash',
-            'models/gemini-2.5-flash',
-            'models/gemini-2.0-flash-001',
-            'models/gemini-2.0-flash-lite',
-            'models/gemini-flash-latest',
-        ]
-        available = []
-        for m in genai.list_models():
-            if 'generateContent' in m.supported_generation_methods:
-                available.append(m.name)
+        # Modelli in cascata — prova in ordine senza sprecare quota
+        MODELS_TO_TRY = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.0-flash-lite']
 
-        logger.info(f"Modelli disponibili ({len(available)}): {available[:8]}...")
+        # Prompt minimale — meno token = risposta più veloce e stabile
+        prompt = (
+            "Extract all data from this invoice as pure JSON only. "
+            "No markdown fences, no extra text. "
+            'Format: {"supplier_name":"...","invoice_date":"YYYY-MM-DD",'
+            '"invoice_number":"...","products":['
+            '{"name":"...","quantity":0.0,"unit":"...","unit_price":0.0}]} '
+            "Use null for unreadable fields. Return ONLY the JSON object."
+        )
 
-        model_name = None
-        for preferred in PREFERRED_VISION:
-            if preferred in available:
-                model_name = preferred
-                break
-        if not model_name and available:
-            # Fallback: primo modello gemini disponibile (escludi gemma)
-            for m in available:
-                if 'gemini' in m and 'gemma' not in m:
-                    model_name = m
-                    break
-        if not model_name:
-            flash("❌ Nessun modello Gemini disponibile per questa API key.")
-            return redirect(url_for('main.invoice_scanner'))
-
-        logger.info(f"Modello selezionato: {model_name}")
-        model = genai.GenerativeModel(model_name)
-
-        prompt = """Sei un sistema OCR professionale specializzato in fatture di fornitura per ristoranti.
-Analizza questo documento e estrai TUTTI i dati strutturati nel seguente formato JSON esatto.
-
-Regole:
-- "quantity" e "unit_price" devono essere numeri decimali (es. 2.5, non "2,5")
-- Se un campo non e' leggibile, usa null
-- "unit" deve essere l'unita' di misura (kg, l, pz, conf, ecc.)
-- Includi TUTTI i prodotti/articoli presenti nella fattura
-
-Rispondi ESCLUSIVAMENTE con il JSON puro, senza markdown, senza commenti, senza testo aggiuntivo:
-{
-  "supplier_name": "nome del fornitore",
-  "invoice_date": "data in formato YYYY-MM-DD o stringa leggibile",
-  "invoice_number": "numero fattura se presente",
-  "products": [
-    {
-      "name": "nome prodotto",
-      "quantity": 0.0,
-      "unit": "kg",
-      "unit_price": 0.0
-    }
-  ]
-}"""
-
+        # Costruisce le parti del contenuto
         if is_pdf:
-            # PDF: usa Files API (unico modo senza librerie aggiuntive)
-            logger.info("Modalità PDF: upload via Files API...")
-            uploaded_file = genai.upload_file(path=filepath, mime_type=mime_type)
-            logger.info(f"File caricato su Gemini: {uploaded_file.name} | stato: {getattr(uploaded_file, 'state', 'N/A')}")
+            logger.info("Modalità PDF: upload via Files API (nuovo SDK)...")
+            gemini_file_ref = client.files.upload(
+                path=filepath,
+                config=genai_types.UploadFileConfig(mime_type=mime_type)
+            )
+            logger.info(f"File caricato: {gemini_file_ref.name} | stato: {gemini_file_ref.state}")
 
-            max_wait = 30
-            waited = 0
-            while hasattr(uploaded_file, 'state') and uploaded_file.state.name == "PROCESSING" and waited < max_wait:
+            max_wait, waited = 30, 0
+            while str(gemini_file_ref.state) in ('FileState.PROCESSING', 'PROCESSING') and waited < max_wait:
                 time.sleep(2)
                 waited += 2
-                uploaded_file = genai.get_file(uploaded_file.name)
-                logger.info(f"Attesa elaborazione PDF... {waited}s | stato: {uploaded_file.state.name}")
+                gemini_file_ref = client.files.get(name=gemini_file_ref.name)
+                logger.info(f"Attesa PDF... {waited}s | stato: {gemini_file_ref.state}")
 
-            if hasattr(uploaded_file, 'state') and uploaded_file.state.name == "FAILED":
+            if str(gemini_file_ref.state) in ('FileState.FAILED', 'FAILED'):
                 flash("❌ Gemini non è riuscito a elaborare il PDF. Prova a convertirlo in immagine JPG.")
                 return redirect(url_for('main.invoice_scanner'))
 
-            content_parts = [prompt, uploaded_file]
-
-            # Cleanup Gemini file dopo la chiamata
-            def cleanup_gemini_file(fname):
-                try:
-                    genai.delete_file(fname)
-                    logger.info(f"File Gemini eliminato: {fname}")
-                except Exception as ce:
-                    logger.warning(f"Impossibile eliminare file Gemini {fname}: {ce}")
+            content_parts = [prompt, gemini_file_ref]
 
         else:
-            # IMMAGINE: inline base64 — non usa Files API, più affidabile
-            logger.info(f"Modalità immagine: invio inline base64 ({mime_type})...")
+            logger.info(f"Modalità immagine: invio inline bytes ({mime_type})...")
             with open(filepath, 'rb') as f_img:
                 raw_bytes = f_img.read()
-            b64_data = base64.b64encode(raw_bytes).decode('utf-8')
             logger.info(f"Dimensione immagine: {len(raw_bytes)} bytes")
-
             content_parts = [
                 prompt,
-                {"inline_data": {"mime_type": mime_type, "data": b64_data}}
+                genai_types.Part.from_bytes(data=raw_bytes, mime_type=mime_type)
             ]
-            cleanup_gemini_file = None  # Non c'è file su Gemini da eliminare
 
-        logger.info(f"Invio richiesta a Gemini [{model_name}]...")
-        response = model.generate_content(content_parts)
-        logger.info(f"Risposta ricevuta. Lunghezza raw: {len(response.text)} caratteri")
-        logger.info(f"Raw Gemini response (primi 500 chars): {response.text[:500]}")
+        # Retry a cascata — prova ogni modello fino al successo
+        response = None
+        model_name = None
+        last_exc = None
+        for candidate in MODELS_TO_TRY:
+            try:
+                logger.info(f"Tentativo con modello: {candidate}")
+                response = client.models.generate_content(
+                    model=candidate,
+                    contents=content_parts,
+                    config=genai_types.GenerateContentConfig(
+                        http_options=genai_types.HttpOptions(timeout=90000),  # 90s in ms
+                    ),
+                )
+                model_name = candidate
+                logger.info(f"Risposta da [{candidate}]. Lunghezza: {len(response.text)} chars")
+                logger.info(f"Raw (primi 300): {response.text[:300]}")
+                break
+            except Exception as exc:
+                last_exc = exc
+                exc_str = str(exc)
+                if any(k in exc_str for k in ('404', 'MODEL_NOT_FOUND', 'not found', 'PERMISSION_DENIED')):
+                    logger.warning(f"Modello {candidate} non disponibile, provo il prossimo: {exc_str[:80]}")
+                    continue
+                raise  # quota, timeout, errori di rete → propagano subito
 
-        if cleanup_gemini_file:
-            cleanup_gemini_file(uploaded_file.name)
+        if response is None:
+            raise last_exc  # tutti i modelli 404
+
+        # Cleanup file PDF su Gemini (best-effort)
+        if gemini_file_ref:
+            try:
+                client.files.delete(name=gemini_file_ref.name)
+                logger.info(f"File Gemini eliminato: {gemini_file_ref.name}")
+            except Exception as ce:
+                logger.warning(f"Impossibile eliminare file Gemini: {ce}")
+            gemini_file_ref = None
 
         raw_text = response.text.replace('```json', '').replace('```', '').strip()
         scan_data = json.loads(raw_text)
@@ -708,23 +682,35 @@ Rispondi ESCLUSIVAMENTE con il JSON puro, senza markdown, senza commenti, senza 
         flash(f"✅ Fattura analizzata con {model_name.split('/')[-1]}! Trovati {n_products} prodotti da {supplier}.")
 
     except json.JSONDecodeError as je:
-        logger.error(f"JSON decode error: {je}. Raw text: {response.text if 'response' in dir() else 'N/A'}")
+        raw = response.text if response is not None else 'N/A'
+        logger.error(f"JSON decode error: {je}. Raw text: {raw[:200]}")
         flash("❌ Gemini non ha restituito un JSON valido. Riprova con un'immagine più nitida o leggibile.")
     except Exception as e:
         err_str = str(e)
-        logger.error(f"Errore scan_invoice: {type(e).__name__}: {e}")
+        logger.error(f"Errore scan_invoice: {type(e).__name__}: {err_str}")
         if 'RESOURCE_EXHAUSTED' in err_str or 'quota' in err_str.lower():
-            flash("⏳ Quota API momentaneamente esaurita (free tier). Attendi 30 secondi e riprova.")
-        elif '404' in err_str or 'not found' in err_str.lower():
-            flash(f"❌ Modello AI non trovato (404). Controlla la chiave GEMINI_API_KEY nel file .env.")
+            flash("⏳ Quota API esaurita (free tier: 15 req/min). Attendi 30–60 secondi e riprova.")
+        elif any(k in err_str for k in ('404', 'MODEL_NOT_FOUND', 'PERMISSION_DENIED')):
+            flash("❌ Nessun modello Gemini disponibile per questa API key. Verifica GEMINI_API_KEY nel file .env.")
+        elif 'INVALID_ARGUMENT' in err_str:
+            flash(f"❌ Argomento non valido inviato a Gemini: {err_str[:120]}")
+        elif 'timeout' in err_str.lower() or 'deadline' in err_str.lower():
+            flash("⏳ Timeout: Gemini ha impiegato troppo. Riprova con un file più piccolo o immagine JPG.")
         else:
-            flash(f"❌ Errore durante l'analisi AI: {type(e).__name__}: {str(e)}")
+            flash(f"❌ Errore durante l'analisi AI: {type(e).__name__}: {str(e)[:120]}")
     finally:
+        # Cleanup file locale
         try:
             os.remove(filepath)
             logger.info(f"File temporaneo locale eliminato: {filepath}")
         except Exception:
             pass
+        # Cleanup file Gemini residuo (se l'eccezione è avvenuta prima del delete)
+        if gemini_file_ref:
+            try:
+                client.files.delete(name=gemini_file_ref.name)
+            except Exception:
+                pass
 
     return redirect(url_for('main.invoice_scanner'))
 

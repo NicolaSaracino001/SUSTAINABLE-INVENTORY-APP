@@ -10,6 +10,11 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body class="auth-page">
+    <!-- Sfondo dinamico: due layer per crossfade + overlay -->
+    <div class="auth-bg-a" id="authBgA"></div>
+    <div class="auth-bg-b" id="authBgB"></div>
+    <div class="auth-overlay"></div>
+
     <div class="auth-card">
         <div class="auth-logo">
             <img src="{{ url_for('static', filename='logo.png') }}?v=2" alt="FoodLoop">
@@ -50,6 +55,47 @@
             <a href="{{ url_for('auth.register') }}" class="auth-link">Registrati</a>
         </p>
     </div>
-    <script>lucide.createIcons();</script>
+    <script>
+        lucide.createIcons();
+
+        // ── Background Slideshow ──────────────────────────────────────────────
+        (function () {
+            const PHOTOS = [
+                'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=1920&q=80&auto=format&fit=crop',
+                'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1920&q=80&auto=format&fit=crop',
+                'https://images.unsplash.com/photo-1559339352-11d035aa65de?w=1920&q=80&auto=format&fit=crop',
+                'https://images.unsplash.com/photo-1600565193348-f74bd3c7ccdf?w=1920&q=80&auto=format&fit=crop',
+            ];
+            const layerA = document.getElementById('authBgA');
+            const layerB = document.getElementById('authBgB');
+            let cur = 0, useA = true;
+
+            function preloadAndShow(url, layer) {
+                const img = new Image();
+                img.onload = () => { layer.style.backgroundImage = `url(${url})`; };
+                img.src = url;
+            }
+
+            function showNext() {
+                const url = PHOTOS[cur % PHOTOS.length];
+                if (useA) {
+                    preloadAndShow(url, layerA);
+                    layerA.style.opacity = '1';
+                    layerB.style.opacity = '0';
+                } else {
+                    preloadAndShow(url, layerB);
+                    layerB.style.opacity = '1';
+                    layerA.style.opacity = '0';
+                }
+                useA = !useA;
+                cur++;
+            }
+
+            // Prima immagine subito
+            showNext();
+            // Poi cicla ogni 7 secondi
+            setInterval(showNext, 7000);
+        })();
+    </script>
 </body>
 </html>
