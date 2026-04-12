@@ -295,7 +295,7 @@ def generate_recipe_ai(item_id):
     try:
         client = genai_sdk.Client(api_key=api_key)
         response = client.models.generate_content(
-            model='gemini-2.0-flash',
+            model='gemini-1.5-flash',
             contents=prompt,
             config=genai_types.GenerateContentConfig(
                 response_mime_type='application/json',
@@ -588,7 +588,7 @@ def scan_invoice():
         client = genai_sdk.Client(api_key=api_key)
 
         # Modelli in cascata — prova in ordine senza sprecare quota
-        MODELS_TO_TRY = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-2.0-flash-lite']
+        MODELS_TO_TRY = ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-2.0-flash-lite']
 
         # Prompt minimale — meno token = risposta più veloce e stabile
         prompt = (
