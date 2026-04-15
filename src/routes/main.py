@@ -38,10 +38,13 @@ def dashboard():
     rest_id = current_user.get_restaurant_id
     all_products = Product.query.filter_by(user_id=rest_id).all()
     low_stock_products = [p for p in all_products if p.quantity <= p.min_threshold]
-    
-    chart_labels = [p.name for p in all_products]
-    chart_values = [p.quantity for p in all_products]
-    chart_thresholds = [p.min_threshold for p in all_products]
+
+    # Grafico: mostra al massimo i 25 prodotti con valore di magazzino più alto.
+    # Con 200+ prodotti un grafico a 200 barre sarebbe illeggibile e lento.
+    chart_products = sorted(all_products, key=lambda p: p.quantity * p.unit_cost, reverse=True)[:25]
+    chart_labels = [p.name for p in chart_products]
+    chart_values = [p.quantity for p in chart_products]
+    chart_thresholds = [p.min_threshold for p in chart_products]
     
     total_inventory_value = sum([p.quantity * p.unit_cost for p in all_products])
     
@@ -359,46 +362,61 @@ def sell_item(item_id):
 @login_required
 @owner_required
 def analytics():
-    logs = ConsumptionLog.query.filter_by(user_id=current_user.id).all()
+    # Query con lazy='joined' definito nel modello → niente N+1 su log.product
+    logs     = ConsumptionLog.query.filter_by(user_id=current_user.id).all()
     products = Product.query.filter_by(user_id=current_user.id).all()
-    wastes = WasteLog.query.filter_by(user_id=current_user.id).all()
-    
-    # 1. Metriche Base
-    total_cost_consumed = sum([log.quantity_used * log.product.unit_cost for log in logs])
-    total_waste_cost = sum([w.cost_lost for w in wastes])
+    wastes   = WasteLog.query.filter_by(user_id=current_user.id).all()
 
-    # 2. Dati Grafico 1: Top 5 Consumi (Barre)
+    # 1. Metriche Base
+    total_cost_consumed = sum(l.quantity_used * l.product.unit_cost for l in logs)
+    total_waste_cost    = sum(w.cost_lost for w in wastes)
+
+    # 2. Grafico 1: Top 5 Consumi (Barre) — per costo totale consumato
     product_stats = {}
     for log in logs:
-        product_stats[log.product.name] = product_stats.get(log.product.name, 0) + log.quantity_used
+        name = log.product.name
+        product_stats[name] = product_stats.get(name, 0) + (log.quantity_used * log.product.unit_cost)
     sorted_stats = sorted(product_stats.items(), key=lambda x: x[1], reverse=True)[:5]
     top_labels = [x[0] for x in sorted_stats]
-    top_values = [x[1] for x in sorted_stats]
+    top_values = [round(x[1], 2) for x in sorted_stats]
 
-    # 3. Dati Grafico 2: Valore per Fornitore (Torta)
+    # 3. Grafico 2: Valore per Fornitore (Torta) — top 6 per leggibilità
     supplier_value = {}
     for p in products:
-        val = p.quantity * p.unit_cost
+        val      = p.quantity * p.unit_cost
         sup_name = p.supplier.name if p.supplier else "Senza Fornitore"
         supplier_value[sup_name] = supplier_value.get(sup_name, 0) + val
-    sup_labels = list(supplier_value.keys())
-    sup_values = [round(v, 2) for v in supplier_value.values()]
+    sorted_sup = sorted(supplier_value.items(), key=lambda x: x[1], reverse=True)[:6]
+    sup_labels = [x[0] for x in sorted_sup]
+    sup_values = [round(x[1], 2) for x in sorted_sup]
 
-    # 4. Dati Grafico 3: Trend Consumi nel tempo (Linea)
-    # Raggruppiamo le ultime 10 operazioni per ID (simulando il tempo)
-    recent_logs = ConsumptionLog.query.filter_by(user_id=current_user.id).order_by(ConsumptionLog.id.desc()).limit(15).all()
-    trend_labels = [f"Op #{l.id}" for l in reversed(recent_logs)]
-    trend_values = [l.quantity_used for l in reversed(recent_logs)]
+    # 4. Grafico 3: Trend Consumi mensile negli ultimi 6 mesi (Linea)
+    #    Aggrega il costo consumato per mese → grafici con un andamento leggibile
+    from collections import defaultdict
+    monthly = defaultdict(float)
+    for log in logs:
+        month_key = log.timestamp.strftime('%b %Y')
+        monthly[month_key] += log.quantity_used * log.product.unit_cost
 
-    # 5. Dati Grafico 4: Salute del Magazzino (Ciambella)
+    # Ordina per data e prendi gli ultimi 6 mesi
+    def _month_sort_key(s):
+        return datetime.strptime(s, '%b %Y')
+
+    sorted_months = sorted(monthly.keys(), key=_month_sort_key)[-6:]
+    trend_labels  = sorted_months
+    trend_values  = [round(monthly[m], 2) for m in sorted_months]
+
+    # 5. Grafico 4: Salute del Magazzino (Ciambella)
     good_stock = len([p for p in products if p.quantity > p.min_threshold])
-    low_stock = len([p for p in products if p.quantity > 0 and p.quantity <= p.min_threshold])
-    out_stock = len([p for p in products if p.quantity == 0])
+    low_stock  = len([p for p in products if 0 < p.quantity <= p.min_threshold])
+    out_stock  = len([p for p in products if p.quantity == 0])
     health_labels = ["In Salute", "Sotto Scorta", "Esauriti"]
     health_values = [good_stock, low_stock, out_stock]
 
-    return render_template('analytics.html', 
-                           total_cost=round(total_cost_consumed, 2), total_orders=len(logs), total_waste=round(total_waste_cost, 2),
+    return render_template('analytics.html',
+                           total_cost=round(total_cost_consumed, 2),
+                           total_orders=len(logs),
+                           total_waste=round(total_waste_cost, 2),
                            top_labels=top_labels, top_values=top_values,
                            sup_labels=sup_labels, sup_values=sup_values,
                            trend_labels=trend_labels, trend_values=trend_values,

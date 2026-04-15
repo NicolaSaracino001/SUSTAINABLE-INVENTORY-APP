@@ -42,7 +42,8 @@ class Product(db.Model):
     unit = db.Column(db.String(50), nullable=False)
     min_threshold = db.Column(db.Float, nullable=False)
     unit_cost = db.Column(db.Float, default=0.0)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False,
+                        index=True)   # ← indice: query filter_by(user_id) veloce
     supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'), nullable=True)
     supplier = db.relationship('Supplier', backref='products')
 
@@ -50,7 +51,8 @@ class Supplier(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(150), nullable=False)
     contact_info = db.Column(db.String(250), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False,
+                        index=True)
 
 class MenuItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -72,17 +74,20 @@ class RecipeItem(db.Model):
 
 class ConsumptionLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False,
+                        index=True)   # ← indice: filtraggio per utente veloce
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
     quantity_used = db.Column(db.Float, nullable=False)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    product = db.relationship('Product')
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow,
+                          index=True)  # ← indice: ordinamento temporale veloce
+    product = db.relationship('Product', lazy='joined')   # eager load: evita N+1
 
 class WasteLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False,
+                        index=True)
     product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
     quantity_wasted = db.Column(db.Float, nullable=False)
     cost_lost = db.Column(db.Float, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-    product = db.relationship('Product')
+    product = db.relationship('Product', lazy='joined')   # eager load: evita N+1

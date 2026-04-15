@@ -591,6 +591,15 @@ tbody tr {
 tbody tr:hover { background: rgba(16, 185, 129, 0.03); }
 tbody tr:last-child td { border-bottom: none; }
 
+/* Cella nome prodotto: tronca testi lunghi per non rompere il layout */
+td.td-name {
+  max-width: 220px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+/* Tooltip nativo via title="…" nel template — nessun JS extra necessario */
+
 /* === 12. BADGES === */
 .badge {
   display: inline-flex; align-items: center; gap: 5px;

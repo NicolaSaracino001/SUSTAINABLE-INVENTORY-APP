@@ -71,7 +71,7 @@
                     <tbody>
                         {% for p in products %}
                         <tr>
-                            <td class="text-bold">{{ p.name }}</td>
+                            <td class="text-bold td-name" title="{{ p.name }}">{{ p.name }}</td>
                             <td>{{ p.quantity }} <span class="text-muted text-sm">{{ p.unit }}</span></td>
                             <td class="text-muted">€ {{ p.unit_cost }}</td>
                             <td>
