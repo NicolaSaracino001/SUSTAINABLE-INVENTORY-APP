@@ -298,7 +298,7 @@ def generate_recipe_ai(item_id):
     try:
         client = genai_sdk.Client(api_key=api_key)
         response = client.models.generate_content(
-            model='gemini-1.5-flash',
+            model='gemini-2.0-flash',
             contents=prompt,
             config=genai_types.GenerateContentConfig(
                 response_mime_type='application/json',
@@ -565,14 +565,21 @@ def scan_invoice():
     """Riceve il file, lo manda a Gemini Vision, salva il JSON estratto."""
     import logging
 
-    # --- Logging terminale ---
+    # --- Logging terminale (verbose) ---
     logger = logging.getLogger('foodloop.invoice')
-    logging.basicConfig(level=logging.INFO, format='[FoodLoop] %(levelname)s: %(message)s')
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter('[FoodLoop] %(levelname)s: %(message)s'))
+        logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
 
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
+        logger.error("GEMINI_API_KEY non trovata nelle variabili di ambiente!")
         flash("❌ Errore: Manca la chiave API di Gemini nel file .env!")
         return redirect(url_for('main.invoice_scanner'))
+    masked_key = api_key[:6] + "..." + api_key[-4:]
+    logger.debug(f"GEMINI_API_KEY trovata: {masked_key}")
 
     if 'invoice_file' not in request.files or request.files['invoice_file'].filename == '':
         flash("❌ Nessun file selezionato. Carica un'immagine o un PDF della fattura.")
@@ -605,8 +612,9 @@ def scan_invoice():
     try:
         client = genai_sdk.Client(api_key=api_key)
 
-        # Modelli in cascata — prova in ordine senza sprecare quota
-        MODELS_TO_TRY = ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-2.0-flash-lite']
+        # Cascata: gemini-2.0-flash è il target principale (multimodale, veloce, free tier).
+        # gemini-2.5-flash-lite come failover su pool di quota separata.
+        MODELS_TO_TRY = ['gemini-2.0-flash', 'gemini-2.5-flash-lite']
 
         # Prompt minimale — meno token = risposta più veloce e stabile
         prompt = (
@@ -671,10 +679,14 @@ def scan_invoice():
             except Exception as exc:
                 last_exc = exc
                 exc_str = str(exc)
+                logger.error(f"[{candidate}] Errore Google API — {type(exc).__name__}: {exc_str}")
                 if any(k in exc_str for k in ('404', 'MODEL_NOT_FOUND', 'not found', 'PERMISSION_DENIED')):
-                    logger.warning(f"Modello {candidate} non disponibile, provo il prossimo: {exc_str[:80]}")
+                    logger.warning(f"Modello {candidate} non disponibile, provo il prossimo.")
                     continue
-                raise  # quota, timeout, errori di rete → propagano subito
+                if 'RESOURCE_EXHAUSTED' in exc_str or '429' in exc_str:
+                    logger.warning(f"Quota esaurita per {candidate}, provo il prossimo nella cascata.")
+                    continue
+                raise  # timeout, errori di rete, argomenti invalidi → propagano subito
 
         if response is None:
             raise last_exc  # tutti i modelli 404
@@ -718,18 +730,26 @@ def scan_invoice():
         logger.error(f"JSON decode error: {je}. Raw text: {raw[:200]}")
         flash("❌ Gemini non ha restituito un JSON valido. Riprova con un'immagine più nitida o leggibile.")
     except Exception as e:
+        import traceback
         err_str = str(e)
-        logger.error(f"Errore scan_invoice: {type(e).__name__}: {err_str}")
+        logger.error("=" * 60)
+        logger.error(f"ERRORE SCAN_INVOICE — {type(e).__name__}")
+        logger.error(f"Messaggio completo Google: {err_str}")
+        logger.error("Traceback completo:")
+        logger.error(traceback.format_exc())
+        logger.error("=" * 60)
         if 'RESOURCE_EXHAUSTED' in err_str or 'quota' in err_str.lower():
             flash("⏳ Quota API esaurita (free tier: 15 req/min). Attendi 30–60 secondi e riprova.")
+        elif 'API_KEY_INVALID' in err_str:
+            flash("❌ Chiave API Gemini non valida. Verifica GEMINI_API_KEY nel file .env.")
         elif any(k in err_str for k in ('404', 'MODEL_NOT_FOUND', 'PERMISSION_DENIED')):
             flash("❌ Nessun modello Gemini disponibile per questa API key. Verifica GEMINI_API_KEY nel file .env.")
         elif 'INVALID_ARGUMENT' in err_str:
-            flash(f"❌ Argomento non valido inviato a Gemini: {err_str[:120]}")
+            flash(f"❌ Argomento non valido inviato a Gemini: {err_str[:150]}")
         elif 'timeout' in err_str.lower() or 'deadline' in err_str.lower():
             flash("⏳ Timeout: Gemini ha impiegato troppo. Riprova con un file più piccolo o immagine JPG.")
         else:
-            flash(f"❌ Errore durante l'analisi AI: {type(e).__name__}: {str(e)[:120]}")
+            flash(f"❌ Errore durante l'analisi AI: {type(e).__name__}: {str(e)[:150]}")
     finally:
         # Cleanup file locale
         try:
