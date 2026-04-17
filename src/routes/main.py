@@ -1,7 +1,7 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, current_app, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, current_app, session, jsonify
 from flask_login import login_required, current_user
 from src.models.models import MenuItem, RecipeItem, Product, ConsumptionLog, User, Supplier, WasteLog, db
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import wraps
 from werkzeug.utils import secure_filename
 import pandas as pd
@@ -421,6 +421,135 @@ def analytics():
                            sup_labels=sup_labels, sup_values=sup_values,
                            trend_labels=trend_labels, trend_values=trend_values,
                            health_labels=health_labels, health_values=health_values)
+
+# ---> FASE 41: AI FORECASTING & BUSINESS INTELLIGENCE <---
+
+@main.route('/api/generate_insights', methods=['POST'])
+@login_required
+@owner_required
+def generate_insights():
+    """Chiama Gemini per analizzare i dati del ristorante e restituire insights in JSON."""
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        return jsonify({"error": "config", "message": "Chiave API Gemini non configurata."}), 500
+
+    rest_id = current_user.id
+    cutoff = datetime.utcnow() - timedelta(days=30)
+
+    # 1. Prodotti con giacenza sotto soglia
+    low_stock = Product.query.filter(
+        Product.user_id == rest_id,
+        Product.quantity <= Product.min_threshold
+    ).order_by(Product.quantity.asc()).limit(10).all()
+
+    # 2. Log consumi ultimi 30 giorni
+    recent_logs = ConsumptionLog.query.filter(
+        ConsumptionLog.user_id == rest_id,
+        ConsumptionLog.timestamp >= cutoff
+    ).all()
+
+    # 3. Log sprechi ultimi 30 giorni
+    waste_logs = WasteLog.query.filter(
+        WasteLog.user_id == rest_id,
+        WasteLog.timestamp >= cutoff
+    ).order_by(WasteLog.cost_lost.desc()).limit(15).all()
+
+    # Aggregazioni per il prompt
+    consumption_by_product = {}
+    for log in recent_logs:
+        name = log.product.name
+        cost = log.quantity_used * log.product.unit_cost
+        consumption_by_product[name] = consumption_by_product.get(name, 0) + cost
+    top_consumption = sorted(consumption_by_product.items(), key=lambda x: x[1], reverse=True)[:8]
+
+    # Costruzione del riassunto testuale
+    low_stock_txt = ", ".join(
+        [f"{p.name} (giacenza: {p.quantity} {p.unit}, soglia: {p.min_threshold})" for p in low_stock]
+    ) or "Nessun prodotto sotto scorta."
+
+    consumption_txt = ", ".join(
+        [f"{name}: €{round(cost, 2)}" for name, cost in top_consumption]
+    ) or "Nessun consumo registrato negli ultimi 30 giorni."
+
+    waste_txt = ", ".join(
+        [f"{w.product.name}: {w.quantity_wasted} {w.product.unit} (€{round(w.cost_lost, 2)} persi)"
+         for w in waste_logs]
+    ) or "Nessuno spreco registrato negli ultimi 30 giorni."
+
+    prompt = f"""Sei un consulente esperto di gestione ristoranti. Analizza questi dati reali e fornisci consigli pratici e specifici in italiano.
+
+DATI DEL RISTORANTE "{current_user.get_restaurant_name}" (ultimi 30 giorni):
+
+PRODOTTI SOTTO SCORTA MINIMA:
+{low_stock_txt}
+
+TOP CONSUMI PER COSTO (€):
+{consumption_txt}
+
+SPRECHI REGISTRATI (allineamenti magazzino):
+{waste_txt}
+
+Rispondi SOLO con un oggetto JSON valido, senza markdown, senza spiegazioni. Usa esattamente queste 3 chiavi:
+{{
+  "low_stock_warnings": ["avviso 1", "avviso 2", "avviso 3"],
+  "cost_anomalies": ["anomalia 1", "anomalia 2", "anomalia 3"],
+  "waste_reduction_tips": ["consiglio 1", "consiglio 2", "consiglio 3"]
+}}
+
+Ogni lista deve contenere da 2 a 4 elementi. Ogni elemento è una stringa concisa e azionabile (max 120 caratteri). Sii specifico con i nomi dei prodotti dai dati forniti."""
+
+    MODELS_TO_TRY = ['gemini-2.0-flash', 'gemini-2.5-flash-lite']
+    response = None
+    last_exc = None
+    quota_exhausted = False
+
+    try:
+        client = genai_sdk.Client(api_key=api_key)
+
+        for candidate in MODELS_TO_TRY:
+            try:
+                response = client.models.generate_content(
+                    model=candidate,
+                    contents=prompt,
+                    config=genai_types.GenerateContentConfig(
+                        response_mime_type='application/json',
+                        http_options=genai_types.HttpOptions(timeout=45000),
+                    ),
+                )
+                break
+            except Exception as exc:
+                last_exc = exc
+                exc_str = str(exc)
+                if 'RESOURCE_EXHAUSTED' in exc_str or '429' in exc_str:
+                    quota_exhausted = True
+                    continue
+                if any(k in exc_str for k in ('404', 'MODEL_NOT_FOUND', 'not found', 'PERMISSION_DENIED')):
+                    continue
+                raise
+
+        if response is None:
+            if quota_exhausted:
+                return jsonify({"error": "quota", "message": "L'AI sta elaborando troppi dati, riprova tra qualche istante."}), 429
+            raise last_exc
+
+        raw_text = response.text.replace('```json', '').replace('```', '').strip()
+        insights = json.loads(raw_text)
+
+        # Validazione minima delle chiavi attese
+        for key in ('low_stock_warnings', 'cost_anomalies', 'waste_reduction_tips'):
+            if key not in insights or not isinstance(insights[key], list):
+                insights[key] = ["Dati insufficienti per questa categoria."]
+
+        return jsonify(insights)
+
+    except json.JSONDecodeError:
+        return jsonify({"error": "parse", "message": "Risposta AI non valida. Riprova."}), 500
+    except Exception as e:
+        err_str = str(e)
+        if 'RESOURCE_EXHAUSTED' in err_str or '429' in err_str:
+            return jsonify({"error": "quota", "message": "L'AI sta elaborando troppi dati, riprova tra qualche istante."}), 429
+        return jsonify({"error": "generic", "message": f"Errore AI: {type(e).__name__}"}), 500
+
 
 @main.route('/profile')
 @login_required

@@ -87,9 +87,320 @@
                 </div>
             </div>
         </div>
+
+        <!-- ===== FASE 41: AI INSIGHTS ===== -->
+        <div class="ai-insights-section">
+            <div class="ai-insights-header">
+                <div class="ai-insights-title-group">
+                    <div class="ai-badge">
+                        <i data-lucide="sparkles"></i>
+                        <span>Powered by Gemini AI</span>
+                    </div>
+                    <h2 class="ai-insights-title">FoodLoop AI Insights</h2>
+                    <p class="ai-insights-subtitle">Analisi intelligente dei tuoi dati: ordina meglio, spreca meno, guadagna di più.</p>
+                </div>
+                <button id="btnGenerateInsights" class="btn-ai-generate" onclick="generateInsights()">
+                    <i data-lucide="sparkles" class="btn-sparkle"></i>
+                    <span>Genera Report AI</span>
+                </button>
+            </div>
+
+            <!-- Loader -->
+            <div id="aiLoader" class="ai-loader" style="display:none;">
+                <div class="ai-loader-spinner"></div>
+                <p>Il tuo Cervello AI sta analizzando i dati del ristorante…</p>
+            </div>
+
+            <!-- Messaggio errore -->
+            <div id="aiError" class="ai-error-box" style="display:none;">
+                <i data-lucide="alert-circle"></i>
+                <span id="aiErrorText"></span>
+            </div>
+
+            <!-- Cards risultato -->
+            <div id="aiResults" class="ai-results-grid" style="display:none;">
+                <div class="ai-card ai-card-amber">
+                    <div class="ai-card-header">
+                        <div class="ai-card-icon ai-icon-amber">
+                            <i data-lucide="package-x"></i>
+                        </div>
+                        <h3>Avvisi Scorte</h3>
+                    </div>
+                    <ul id="listLowStock" class="ai-card-list"></ul>
+                </div>
+                <div class="ai-card ai-card-red">
+                    <div class="ai-card-header">
+                        <div class="ai-card-icon ai-icon-red">
+                            <i data-lucide="trending-down"></i>
+                        </div>
+                        <h3>Anomalie di Costo</h3>
+                    </div>
+                    <ul id="listCostAnomalies" class="ai-card-list"></ul>
+                </div>
+                <div class="ai-card ai-card-green">
+                    <div class="ai-card-header">
+                        <div class="ai-card-icon ai-icon-green">
+                            <i data-lucide="leaf"></i>
+                        </div>
+                        <h3>Riduzione Sprechi</h3>
+                    </div>
+                    <ul id="listWasteTips" class="ai-card-list"></ul>
+                </div>
+            </div>
+        </div>
     </div>
 
+    <style>
+        /* ---- AI Insights Section ---- */
+        .ai-insights-section {
+            margin-top: 12px;
+            background: linear-gradient(135deg, rgba(139,92,246,0.07) 0%, rgba(16,185,129,0.07) 100%);
+            border: 1px solid rgba(139,92,246,0.20);
+            border-radius: var(--r-xl);
+            padding: 32px;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            box-shadow: 0 8px 32px rgba(139,92,246,0.08), var(--shadow-md);
+        }
+        .ai-insights-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 28px;
+        }
+        .ai-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(139,92,246,0.12);
+            color: #7c3aed;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 12px;
+            border-radius: var(--r-full);
+            margin-bottom: 8px;
+            letter-spacing: 0.02em;
+        }
+        .ai-badge svg { width: 13px; height: 13px; }
+        .ai-insights-title {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--text-1);
+            margin: 0 0 6px;
+            letter-spacing: -0.4px;
+        }
+        .ai-insights-subtitle {
+            font-size: 14px;
+            color: var(--text-3);
+            margin: 0;
+        }
+        .btn-ai-generate {
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            background: linear-gradient(135deg, #7c3aed 0%, #10b981 100%);
+            color: #fff;
+            border: none;
+            border-radius: var(--r-full);
+            padding: 13px 26px;
+            font-size: 15px;
+            font-weight: 700;
+            font-family: 'Inter', sans-serif;
+            cursor: pointer;
+            white-space: nowrap;
+            box-shadow: 0 4px 18px rgba(124,58,237,0.32);
+            transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+            flex-shrink: 0;
+        }
+        .btn-ai-generate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 28px rgba(124,58,237,0.42);
+        }
+        .btn-ai-generate:active { transform: translateY(0); }
+        .btn-ai-generate:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-sparkle { width: 18px; height: 18px; }
+        @keyframes pulse-sparkle {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.2) rotate(15deg); }
+        }
+        .btn-ai-generate:not(:disabled) .btn-sparkle {
+            animation: pulse-sparkle 2.4s ease-in-out infinite;
+        }
+
+        /* Loader */
+        .ai-loader {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            padding: 32px;
+            color: var(--text-3);
+            font-size: 14px;
+        }
+        .ai-loader-spinner {
+            width: 40px; height: 40px;
+            border: 3px solid rgba(124,58,237,0.15);
+            border-top-color: #7c3aed;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Error box */
+        .ai-error-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(239,68,68,0.08);
+            border: 1px solid rgba(239,68,68,0.22);
+            border-radius: var(--r-md);
+            padding: 16px 20px;
+            color: #dc2626;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .ai-error-box svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+        /* Results grid */
+        .ai-results-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+        @media (max-width: 900px) {
+            .ai-results-grid { grid-template-columns: 1fr; }
+        }
+
+        /* AI Cards */
+        .ai-card {
+            background: var(--surface);
+            border-radius: var(--r-lg);
+            padding: 20px;
+            border: 1px solid var(--border-glass);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            box-shadow: var(--shadow-sm);
+            animation: fadeSlideUp 0.4s ease both;
+        }
+        .ai-card:nth-child(2) { animation-delay: 0.08s; }
+        .ai-card:nth-child(3) { animation-delay: 0.16s; }
+        @keyframes fadeSlideUp {
+            from { opacity: 0; transform: translateY(14px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .ai-card-amber { border-top: 3px solid var(--accent-amber); }
+        .ai-card-red   { border-top: 3px solid var(--accent-red); }
+        .ai-card-green { border-top: 3px solid var(--primary); }
+
+        .ai-card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .ai-card-header h3 {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-1);
+            margin: 0;
+        }
+        .ai-card-icon {
+            width: 34px; height: 34px;
+            border-radius: var(--r-sm);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .ai-card-icon svg { width: 16px; height: 16px; }
+        .ai-icon-amber { background: rgba(245,158,11,0.12); color: var(--accent-amber); }
+        .ai-icon-red   { background: rgba(239,68,68,0.10);  color: var(--accent-red); }
+        .ai-icon-green { background: var(--primary-glow);    color: var(--primary); }
+
+        .ai-card-list {
+            list-style: none;
+            padding: 0; margin: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .ai-card-list li {
+            font-size: 13px;
+            color: var(--text-2);
+            line-height: 1.5;
+            padding-left: 16px;
+            position: relative;
+        }
+        .ai-card-list li::before {
+            content: '•';
+            position: absolute;
+            left: 4px;
+            color: var(--text-4);
+            font-weight: 700;
+        }
+    </style>
+
     <script>
+        async function generateInsights() {
+            const btn    = document.getElementById('btnGenerateInsights');
+            const loader = document.getElementById('aiLoader');
+            const errBox = document.getElementById('aiError');
+            const errTxt = document.getElementById('aiErrorText');
+            const results = document.getElementById('aiResults');
+
+            // Reset UI
+            btn.disabled = true;
+            results.style.display = 'none';
+            errBox.style.display  = 'none';
+            loader.style.display  = 'flex';
+
+            try {
+                const res = await fetch('/api/generate_insights', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json',
+                               'X-CSRFToken': document.querySelector('meta[name="csrf-token"]')?.content || '' }
+                });
+
+                const data = await res.json();
+                loader.style.display = 'none';
+
+                if (!res.ok || data.error) {
+                    const msg = data.message || "Errore sconosciuto. Riprova tra qualche istante.";
+                    errTxt.textContent = msg;
+                    errBox.style.display = 'flex';
+                    lucide.createIcons();
+                    return;
+                }
+
+                // Popola le liste
+                fillList('listLowStock',      data.low_stock_warnings    || []);
+                fillList('listCostAnomalies', data.cost_anomalies         || []);
+                fillList('listWasteTips',     data.waste_reduction_tips   || []);
+
+                results.style.display = 'grid';
+                lucide.createIcons();
+
+            } catch (err) {
+                loader.style.display = 'none';
+                errTxt.textContent = "Errore di connessione. Controlla la rete e riprova.";
+                errBox.style.display = 'flex';
+                lucide.createIcons();
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        function fillList(listId, items) {
+            const ul = document.getElementById(listId);
+            ul.innerHTML = items.length
+                ? items.map(txt => `<li>${txt}</li>`).join('')
+                : '<li>Nessun dato disponibile.</li>';
+        }
+
         lucide.createIcons();
 
         const gridColor = 'rgba(226,232,240,0.6)';
