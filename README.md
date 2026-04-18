@@ -5,9 +5,9 @@
 
 ![logo](./assets/logo.png)
 
-![Screenshot_Login](./assets/screenshot_dashboard.png)
+![Screenshot_Login](./assets/login.png)
 
-![Screenshot_Dashboard](./assets/screenshot_login.png)
+![Screenshot_Dashboard](./assets/dashboard.png)
 
 ---
 
