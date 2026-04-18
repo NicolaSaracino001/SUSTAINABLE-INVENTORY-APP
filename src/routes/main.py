@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, current_app, session, jsonify
 from flask_login import login_required, current_user
-from src.models.models import MenuItem, RecipeItem, Product, ConsumptionLog, User, Supplier, WasteLog, db
+from src.models.models import MenuItem, RecipeItem, Product, ConsumptionLog, User, Supplier, WasteLog, SaleLog, db
 from datetime import datetime, timedelta
 from functools import wraps
 from werkzeug.utils import secure_filename
@@ -984,3 +984,477 @@ def apply_invoice_update():
         flash("ℹ️ Nessun prodotto selezionato per l'aggiornamento.")
 
     return redirect(url_for('main.invoice_scanner'))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# FASE 42: SALES & INVENTORY OFFLOADING — Scarico Automatizzato
+# ══════════════════════════════════════════════════════════════════════════════
+
+import logging as _logging
+
+_sale_logger = _logging.getLogger('foodloop.sales')
+
+
+def process_sale(user_id, sold_items_list, source='manual'):
+    """
+    Scarica il magazzino in base ai piatti venduti usando la Distinta Base (RecipeItem).
+
+    Args:
+        user_id          : ID del ristorante (owner)
+        sold_items_list  : lista di dict [{"menu_item_id": int, "portions": float}, ...]
+        source           : causale — 'receipt_scan' | 'manual'
+
+    Returns:
+        SaleLog appena creato e committato
+
+    Raises:
+        ValueError  : se scorte insufficienti per un prodotto
+    """
+    _sale_logger.info(
+        f"[process_sale] START — user={user_id} source={source} items={sold_items_list}"
+    )
+
+    total_portions = sum(float(i.get('portions', 1)) for i in sold_items_list)
+
+    # ── Pre-check: verifica disponibilità prima di toccare qualsiasi riga ─────
+    for item_data in sold_items_list:
+        menu_item = MenuItem.query.get(item_data['menu_item_id'])
+        if not menu_item:
+            _sale_logger.warning(f"  MenuItem ID {item_data['menu_item_id']} non trovato — saltato")
+            continue
+
+        portions     = float(item_data.get('portions', 1))
+        recipe_items = RecipeItem.query.filter_by(menu_item_id=menu_item.id).all()
+        if not recipe_items:
+            _sale_logger.warning(f"  '{menu_item.name}' senza ricetta — saltato nel pre-check")
+            continue
+
+        for r_item in recipe_items:
+            product = Product.query.get(r_item.product_id)
+            if not product or product.user_id != user_id:
+                continue
+            needed = r_item.quantity_needed * portions
+            if product.quantity < needed:
+                raise ValueError(
+                    f"Scorte insufficienti per '{product.name}': "
+                    f"disponibile {round(product.quantity, 3)} {product.unit}, "
+                    f"richiesto {round(needed, 3)} per '{menu_item.name}' x{portions}"
+                )
+
+    # ── Crea SaleLog ──────────────────────────────────────────────────────────
+    sale_log = SaleLog(
+        user_id=user_id,
+        total_items=int(total_portions),
+        source=source
+    )
+    db.session.add(sale_log)
+    db.session.flush()   # ottieni sale_log.id prima del commit
+    _sale_logger.info(f"  SaleLog creato (id={sale_log.id})")
+
+    # ── Scarico effettivo ─────────────────────────────────────────────────────
+    deducted_count = 0
+    for item_data in sold_items_list:
+        menu_item = MenuItem.query.get(item_data['menu_item_id'])
+        if not menu_item:
+            continue
+
+        portions     = float(item_data.get('portions', 1))
+        recipe_items = RecipeItem.query.filter_by(menu_item_id=menu_item.id).all()
+
+        if not recipe_items:
+            _sale_logger.warning(f"  '{menu_item.name}' senza ricetta — nessuno scarico")
+            continue
+
+        for r_item in recipe_items:
+            product = Product.query.get(r_item.product_id)
+            if not product or product.user_id != user_id:
+                continue
+
+            qty_used          = r_item.quantity_needed * portions
+            product.quantity  = max(0.0, product.quantity - qty_used)
+
+            log_entry = ConsumptionLog(
+                user_id=user_id,
+                product_id=product.id,
+                quantity_used=qty_used,
+                notes=f"Vendita: {menu_item.name} x{int(portions)} [Sale #{sale_log.id}]"
+            )
+            db.session.add(log_entry)
+            deducted_count += 1
+            _sale_logger.info(
+                f"  Scaricato: '{product.name}' -{round(qty_used, 4)} {product.unit} "
+                f"← '{menu_item.name}' x{portions}  (giacenza ora: {round(product.quantity, 4)})"
+            )
+
+    db.session.commit()
+    _sale_logger.info(
+        f"[process_sale] DONE — SaleLog#{sale_log.id}  "
+        f"{deducted_count} ConsumptionLog scritti"
+    )
+    return sale_log
+
+
+# ── Pagina principale Chiusura Cassa ─────────────────────────────────────────
+
+@main.route('/sales_offload')
+@login_required
+def sales_offload():
+    """Pagina Chiusura Cassa: gestione menu + scanner scontrini."""
+    rest_id    = current_user.get_restaurant_id
+    menu_items = MenuItem.query.filter_by(user_id=rest_id).all()
+    products   = Product.query.filter_by(user_id=rest_id).all()
+
+    pending_sale = None
+    result_id    = session.get('sale_scan_result_id')
+    if result_id:
+        tmp_folder  = os.path.join(current_app.root_path, 'static', 'sale_tmp')
+        result_path = os.path.join(tmp_folder, f'result_{result_id}.json')
+        if os.path.exists(result_path):
+            with open(result_path, 'r', encoding='utf-8') as f:
+                pending_sale = json.load(f)
+
+    return render_template(
+        'sales_offload.html',
+        menu_items=menu_items,
+        products=products,
+        pending_sale=pending_sale
+    )
+
+
+# ── AI Receipt Scanner ────────────────────────────────────────────────────────
+
+@main.route('/api/scan_receipt', methods=['POST'])
+@login_required
+def scan_receipt():
+    """
+    Riceve l'immagine dello scontrino, usa la cascata Gemini
+    (gemini-2.0-flash → failover gemini-2.5-flash-lite su quota 429),
+    estrae la lista piatti e salva in sessione per la conferma a due step.
+    """
+    logger = _logging.getLogger('foodloop.receipt')
+    if not logger.handlers:
+        handler = _logging.StreamHandler()
+        handler.setFormatter(_logging.Formatter('[FoodLoop] %(levelname)s: %(message)s'))
+        logger.addHandler(handler)
+    logger.setLevel(_logging.DEBUG)
+
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        logger.error("GEMINI_API_KEY non trovata!")
+        flash("❌ Manca la chiave API Gemini nel file .env!")
+        return redirect(url_for('main.sales_offload'))
+
+    masked = api_key[:6] + "..." + api_key[-4:]
+    logger.debug(f"GEMINI_API_KEY trovata: {masked}")
+
+    if 'receipt_file' not in request.files or request.files['receipt_file'].filename == '':
+        flash("❌ Nessun file selezionato. Carica un'immagine dello scontrino.")
+        return redirect(url_for('main.sales_offload'))
+
+    file     = request.files['receipt_file']
+    ext      = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+    mime_map = {
+        'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
+        'png': 'image/png', 'webp': 'image/webp',
+        'pdf': 'application/pdf'
+    }
+    if ext not in mime_map:
+        flash("❌ Formato non supportato. Carica JPG, PNG, WEBP o PDF.")
+        return redirect(url_for('main.sales_offload'))
+
+    mime_type = mime_map[ext]
+    is_pdf    = ext == 'pdf'
+
+    tmp_folder = os.path.join(current_app.root_path, 'static', 'sale_tmp')
+    os.makedirs(tmp_folder, exist_ok=True)
+    filename = f"rec_{current_user.id}_{uuid.uuid4().hex}.{ext}"
+    filepath = os.path.join(tmp_folder, filename)
+    file.save(filepath)
+    logger.info(f"File scontrino salvato: {filepath} ({mime_type})")
+
+    gemini_file_ref = None
+    response        = None
+
+    try:
+        client        = genai_sdk.Client(api_key=api_key)
+        MODELS_TO_TRY = ['gemini-2.0-flash', 'gemini-2.5-flash-lite']
+
+        prompt = (
+            "You are a restaurant POS system. Extract all dishes/items and their quantities "
+            "from this end-of-day receipt or sales summary. "
+            "Return ONLY a pure JSON array. No markdown, no extra text. "
+            'Format: [{"name": "dish name", "quantity": number}] '
+            "If quantity is not readable, use 1. Return ONLY the JSON array."
+        )
+
+        if is_pdf:
+            logger.info("Modalità PDF: upload via Files API...")
+            gemini_file_ref = client.files.upload(
+                path=filepath,
+                config=genai_types.UploadFileConfig(mime_type=mime_type)
+            )
+            max_wait, waited = 30, 0
+            while str(gemini_file_ref.state) in ('FileState.PROCESSING', 'PROCESSING') and waited < max_wait:
+                time.sleep(2)
+                waited += 2
+                gemini_file_ref = client.files.get(name=gemini_file_ref.name)
+                logger.info(f"Attesa PDF... {waited}s | stato: {gemini_file_ref.state}")
+            if str(gemini_file_ref.state) in ('FileState.FAILED', 'FAILED'):
+                flash("❌ Gemini non è riuscito a elaborare il PDF.")
+                return redirect(url_for('main.sales_offload'))
+            content_parts = [prompt, gemini_file_ref]
+        else:
+            with open(filepath, 'rb') as f_img:
+                raw_bytes = f_img.read()
+            logger.info(f"Immagine: {len(raw_bytes)} bytes — invio inline")
+            content_parts = [
+                prompt,
+                genai_types.Part.from_bytes(data=raw_bytes, mime_type=mime_type)
+            ]
+
+        # ── Cascata modelli ────────────────────────────────────────────────────
+        model_name = None
+        last_exc   = None
+        for candidate in MODELS_TO_TRY:
+            try:
+                logger.info(f"Tentativo con modello: {candidate}")
+                response = client.models.generate_content(
+                    model=candidate,
+                    contents=content_parts,
+                    config=genai_types.GenerateContentConfig(
+                        http_options=genai_types.HttpOptions(timeout=90000),
+                    ),
+                )
+                model_name = candidate
+                logger.info(f"Risposta da [{candidate}]. Lunghezza: {len(response.text)} chars")
+                logger.debug(f"Raw (primi 300): {response.text[:300]}")
+                break
+            except Exception as exc:
+                last_exc = exc
+                exc_str  = str(exc)
+                logger.error(f"[{candidate}] Errore: {type(exc).__name__}: {exc_str}")
+                if any(k in exc_str for k in ('404', 'MODEL_NOT_FOUND', 'not found', 'PERMISSION_DENIED')):
+                    logger.warning(f"Modello {candidate} non disponibile, provo il prossimo.")
+                    continue
+                if 'RESOURCE_EXHAUSTED' in exc_str or '429' in exc_str:
+                    logger.warning(f"Quota esaurita per {candidate}, failover.")
+                    continue
+                raise
+
+        if response is None:
+            raise last_exc
+
+        # Cleanup file Gemini
+        if gemini_file_ref:
+            try:
+                client.files.delete(name=gemini_file_ref.name)
+                logger.info(f"File Gemini eliminato: {gemini_file_ref.name}")
+            except Exception as ce:
+                logger.warning(f"Impossibile eliminare file Gemini: {ce}")
+            gemini_file_ref = None
+
+        raw_text = response.text.replace('```json', '').replace('```', '').strip()
+        ai_items = json.loads(raw_text)
+        logger.info(f"JSON parsato. Voci dallo scontrino: {len(ai_items)}")
+
+        # ── Matching AI names → MenuItem ──────────────────────────────────────
+        rest_id    = current_user.get_restaurant_id
+        menu_items = MenuItem.query.filter_by(user_id=rest_id).all()
+
+        matched_items   = []
+        unmatched_names = []
+
+        for ai_item in ai_items:
+            ai_name  = (ai_item.get('name') or '').lower().strip()
+            portions = float(ai_item.get('quantity', 1))
+            if not ai_name:
+                continue
+
+            found = next(
+                (m for m in menu_items if m.name.lower().strip() == ai_name), None
+            )
+            if not found:
+                found = next(
+                    (m for m in menu_items
+                     if ai_name in m.name.lower() or m.name.lower() in ai_name),
+                    None
+                )
+
+            if found:
+                recipe_items = RecipeItem.query.filter_by(menu_item_id=found.id).all()
+                deductions   = []
+                for r in recipe_items:
+                    prod = Product.query.get(r.product_id)
+                    if prod and prod.user_id == rest_id:
+                        deductions.append({
+                            'product_id':      prod.id,
+                            'product_name':    prod.name,
+                            'unit':            prod.unit,
+                            'qty_per_portion': r.quantity_needed,
+                            'total_qty':       round(r.quantity_needed * portions, 4),
+                            'current_stock':   round(prod.quantity, 4),
+                        })
+
+                matched_items.append({
+                    'menu_item_id':   found.id,
+                    'menu_item_name': found.name,
+                    'portions':       portions,
+                    'has_recipe':     len(recipe_items) > 0,
+                    'deductions':     deductions,
+                })
+                logger.info(f"  Match: '{ai_item.get('name')}' → '{found.name}' x{portions}")
+            else:
+                unmatched_names.append(ai_item.get('name', '?'))
+                logger.warning(f"  No match: '{ai_item.get('name')}'")
+
+        # ── Salva pending sale ────────────────────────────────────────────────
+        pending = {
+            'source':          'receipt_scan',
+            'scan_model':      model_name,
+            'raw_items':       ai_items,
+            'matched_items':   matched_items,
+            'unmatched_names': unmatched_names,
+        }
+        result_id   = uuid.uuid4().hex
+        result_path = os.path.join(tmp_folder, f'result_{result_id}.json')
+        with open(result_path, 'w', encoding='utf-8') as f:
+            json.dump(pending, f, ensure_ascii=False)
+
+        old_id = session.get('sale_scan_result_id')
+        if old_id:
+            old_path = os.path.join(tmp_folder, f'result_{old_id}.json')
+            try:
+                os.remove(old_path)
+            except Exception:
+                pass
+
+        session['sale_scan_result_id'] = result_id
+
+        n_matched   = len(matched_items)
+        n_unmatched = len(unmatched_names)
+        flash(
+            f"✅ Scontrino analizzato con {model_name.split('/')[-1]}! "
+            f"{n_matched} piatti riconosciuti"
+            + (f", {n_unmatched} non trovati nel menu." if n_unmatched else ".")
+        )
+
+    except json.JSONDecodeError as je:
+        raw = response.text if response else 'N/A'
+        logger.error(f"JSON decode error: {je}. Raw: {raw[:200]}")
+        flash("❌ Gemini non ha restituito JSON valido. Riprova con un'immagine più nitida.")
+    except Exception as e:
+        import traceback as _tb
+        err_str = str(e)
+        logger.error("=" * 60)
+        logger.error(f"ERRORE SCAN_RECEIPT — {type(e).__name__}: {err_str}")
+        logger.error(_tb.format_exc())
+        logger.error("=" * 60)
+        if 'RESOURCE_EXHAUSTED' in err_str or '429' in err_str:
+            flash("⏳ Quota API esaurita. Attendi 30–60 secondi e riprova.")
+        elif 'API_KEY_INVALID' in err_str:
+            flash("❌ Chiave API Gemini non valida.")
+        elif any(k in err_str for k in ('404', 'MODEL_NOT_FOUND', 'PERMISSION_DENIED')):
+            flash("❌ Nessun modello Gemini disponibile per questa API key.")
+        elif 'timeout' in err_str.lower():
+            flash("⏳ Timeout Gemini. Riprova con un'immagine JPG più piccola.")
+        else:
+            flash(f"❌ Errore analisi AI: {type(e).__name__}: {str(e)[:150]}")
+    finally:
+        try:
+            os.remove(filepath)
+            logger.info(f"File temporaneo eliminato: {filepath}")
+        except Exception:
+            pass
+        if gemini_file_ref:
+            try:
+                client.files.delete(name=gemini_file_ref.name)
+            except Exception:
+                pass
+
+    return redirect(url_for('main.sales_offload'))
+
+
+# ── Conferma Scarico ──────────────────────────────────────────────────────────
+
+@main.route('/confirm_sale', methods=['POST'])
+@login_required
+def confirm_sale():
+    """
+    Legge la vendita in attesa (receipt_scan) dalla sessione
+    oppure riceve la lista manuale dal form, poi chiama process_sale().
+    """
+    logger  = _logging.getLogger('foodloop.sales')
+    rest_id = current_user.get_restaurant_id
+    source  = request.form.get('source', 'manual')
+
+    if source == 'receipt_scan':
+        result_id = session.pop('sale_scan_result_id', None)
+        if not result_id:
+            flash("❌ Nessuna vendita in attesa trovata.")
+            return redirect(url_for('main.sales_offload'))
+
+        tmp_folder  = os.path.join(current_app.root_path, 'static', 'sale_tmp')
+        result_path = os.path.join(tmp_folder, f'result_{result_id}.json')
+        try:
+            with open(result_path, 'r', encoding='utf-8') as f:
+                pending = json.load(f)
+        except Exception:
+            flash("❌ Dati di vendita scaduti. Ricarica lo scontrino.")
+            return redirect(url_for('main.sales_offload'))
+        finally:
+            try:
+                os.remove(result_path)
+            except Exception:
+                pass
+
+        sold_items_list = [
+            {'menu_item_id': item['menu_item_id'], 'portions': item['portions']}
+            for item in pending.get('matched_items', [])
+            if item.get('has_recipe')
+        ]
+    else:
+        item_ids        = request.form.getlist('menu_item_id')
+        portions_list   = request.form.getlist('portions')
+        sold_items_list = []
+        for mid, qty in zip(item_ids, portions_list):
+            try:
+                q = float(qty)
+                if q > 0:
+                    sold_items_list.append({'menu_item_id': int(mid), 'portions': q})
+            except (ValueError, TypeError):
+                pass
+
+    if not sold_items_list:
+        flash("⚠️ Nessun piatto con ricetta definita — nessuno scarico eseguito.")
+        return redirect(url_for('main.sales_offload'))
+
+    try:
+        sale_log = process_sale(rest_id, sold_items_list, source=source)
+        total    = sum(i['portions'] for i in sold_items_list)
+        flash(
+            f"✅ Scarico completato! {int(total)} porzioni registrate. "
+            f"(SaleLog #{sale_log.id})"
+        )
+    except ValueError as ve:
+        flash(f"❌ Impossibile completare lo scarico: {ve}")
+    except Exception as e:
+        logger.error(f"Errore confirm_sale: {e}", exc_info=True)
+        flash(f"❌ Errore interno durante lo scarico: {type(e).__name__}")
+
+    return redirect(url_for('main.sales_offload'))
+
+
+@main.route('/clear_sale_scan')
+@login_required
+def clear_sale_scan():
+    """Elimina la vendita in attesa dalla sessione."""
+    result_id = session.pop('sale_scan_result_id', None)
+    if result_id:
+        tmp_folder  = os.path.join(current_app.root_path, 'static', 'sale_tmp')
+        result_path = os.path.join(tmp_folder, f'result_{result_id}.json')
+        try:
+            os.remove(result_path)
+        except Exception:
+            pass
+    flash("Analisi scontrino annullata.")
+    return redirect(url_for('main.sales_offload'))

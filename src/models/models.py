@@ -80,7 +80,18 @@ class ConsumptionLog(db.Model):
     quantity_used = db.Column(db.Float, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow,
                           index=True)  # ← indice: ordinamento temporale veloce
+    notes = db.Column(db.String(200), nullable=True)      # causale: es. "Vendita: Pizza x2"
     product = db.relationship('Product', lazy='joined')   # eager load: evita N+1
+
+class SaleLog(db.Model):
+    """Traccia ogni chiusura di cassa / vendita registrata nel sistema."""
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False,
+                        index=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    total_items = db.Column(db.Integer, nullable=False, default=0)  # numero totale di porzioni
+    source = db.Column(db.String(50), nullable=False, default='manual')  # 'receipt_scan' | 'manual'
+
 
 class WasteLog(db.Model):
     id = db.Column(db.Integer, primary_key=True)

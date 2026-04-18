@@ -30,6 +30,10 @@
            class="nav-item {% if sidebar_active == 'invoice_scanner' %}active{% endif %}">
             <i data-lucide="scan-line"></i> Invoice Scanner
         </a>
+        <a href="{{ url_for('main.sales_offload') }}"
+           class="nav-item {% if sidebar_active == 'sales_offload' %}active{% endif %}">
+            <i data-lucide="receipt"></i> Chiusura Cassa
+        </a>
     </nav>
 
     <div class="bottom-nav">

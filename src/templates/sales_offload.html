@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FoodLoop — Chiusura Cassa</title>
+    <link rel="icon" href="{{ url_for('static', filename='logo.png') }}?v=2" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/foodloop.css') }}">
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        /* ── Fase 42 — Sales Offload styles (scoped, non tocca foodloop.css) ── */
+
+        /* Sezione header colorata */
+        .section-header-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 14px 4px 8px;
+            border-radius: var(--r-full);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin-bottom: 16px;
+        }
+        .pill-menu    { background: rgba(16,185,129,0.12);  color: var(--primary-darker); }
+        .pill-scanner { background: rgba(139,92,246,0.12);  color: #6d28d9; }
+
+        /* Card con accent border-top */
+        .card-menu    { border-top: 3px solid var(--primary); }
+        .card-scanner { border-top: 3px solid var(--accent-purple); }
+
+        /* Drag & Drop zone — stessa struttura di invoice_scanner */
+        .upload-zone {
+            border: 2px dashed var(--border);
+            border-radius: var(--r-md);
+            padding: 36px 24px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color var(--t) var(--ease), background var(--t) var(--ease);
+        }
+        .upload-zone:hover, .upload-zone.dragover {
+            border-color: var(--accent-purple);
+            background: rgba(139,92,246,0.05);
+        }
+        .upload-zone-icon {
+            width: 56px; height: 56px;
+            border-radius: var(--r-md);
+            background: rgba(139,92,246,0.10);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 16px;
+            color: var(--accent-purple);
+        }
+        .upload-zone h4   { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+        .upload-zone p    { font-size: 13px; color: var(--text-3); }
+
+        .file-preview {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            margin-top: 12px;
+            padding: 10px 14px;
+            background: rgba(139,92,246,0.08);
+            border-radius: var(--r-sm);
+            font-size: 13px;
+            font-weight: 500;
+            color: #6d28d9;
+        }
+        .file-preview.show { display: flex; }
+
+        /* Preview vendita */
+        .preview-card {
+            background: linear-gradient(135deg, rgba(139,92,246,0.06), rgba(139,92,246,0.10));
+            border: 1px solid rgba(139,92,246,0.20);
+            border-radius: var(--r-lg);
+            padding: 24px;
+            margin-top: 20px;
+        }
+        .preview-card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(139,92,246,0.15);
+        }
+        .preview-card-icon {
+            width: 40px; height: 40px;
+            border-radius: var(--r-sm);
+            background: rgba(139,92,246,0.15);
+            display: flex; align-items: center; justify-content: center;
+            color: #6d28d9;
+        }
+        .preview-card-title { font-size: 15px; font-weight: 700; color: #4c1d95; flex: 1; }
+        .preview-card-sub   { font-size: 12px; color: #6d28d9; margin-top: 2px; }
+
+        /* Dish block nella preview */
+        .dish-block {
+            background: rgba(255,255,255,0.70);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(139,92,246,0.15);
+            border-radius: var(--r-md);
+            padding: 16px 18px;
+            margin-bottom: 12px;
+        }
+        .dish-block-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .dish-name {
+            font-size: 15px; font-weight: 700;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .portions-badge {
+            font-size: 12px; font-weight: 700;
+            padding: 3px 10px;
+            border-radius: var(--r-full);
+            background: rgba(139,92,246,0.15);
+            color: #5b21b6;
+        }
+        .no-recipe-warn {
+            font-size: 12px;
+            color: var(--accent-amber);
+            display: flex; align-items: center; gap: 5px;
+            padding: 6px 10px;
+            background: rgba(245,158,11,0.08);
+            border-radius: var(--r-sm);
+        }
+
+        /* Mini-tabella deduzioni */
+        .deduction-table { width: 100%; border-collapse: collapse; }
+        .deduction-table th {
+            font-size: 11px; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.06em; color: var(--text-3);
+            padding: 4px 8px; text-align: left;
+        }
+        .deduction-table td {
+            font-size: 13px; padding: 5px 8px;
+            border-top: 1px solid rgba(139,92,246,0.08);
+        }
+        .qty-deduct { font-weight: 700; color: #dc2626; }
+        .stock-ok   { color: var(--primary-darker); font-weight: 600; }
+        .stock-low  { color: var(--accent-amber);   font-weight: 600; }
+        .stock-out  { color: var(--accent-red);      font-weight: 600; }
+
+        /* Unmatched items */
+        .unmatched-list {
+            display: flex; flex-wrap: wrap; gap: 6px;
+            margin-top: 10px;
+        }
+        .unmatched-chip {
+            font-size: 12px; padding: 4px 12px;
+            background: rgba(239,68,68,0.08);
+            border: 1px solid rgba(239,68,68,0.20);
+            border-radius: var(--r-full);
+            color: #b91c1c;
+        }
+
+        /* Btn viola */
+        .btn-purple {
+            background: linear-gradient(135deg, #7c3aed, #6d28d9);
+            color: #fff;
+            box-shadow: 0 4px 16px rgba(109,40,217,0.30);
+        }
+        .btn-purple:hover {
+            background: linear-gradient(135deg, #6d28d9, #5b21b6);
+            box-shadow: 0 6px 24px rgba(109,40,217,0.40);
+        }
+
+        /* Loading overlay override colore */
+        #loadingOverlay .loading-text { color: #e9d5ff; }
+        #loadingOverlay .loading-sub  { color: #c4b5fd; }
+
+        /* Table azione manuale */
+        .qty-input {
+            width: 72px;
+            padding: 6px 10px;
+            border-radius: var(--r-sm);
+            border: 1px solid var(--border);
+            background: var(--surface-input);
+            font-size: 13px; font-weight: 600;
+            text-align: center;
+        }
+        .qty-input:focus {
+            outline: none;
+            border-color: var(--accent-purple);
+            box-shadow: 0 0 0 3px rgba(139,92,246,0.12);
+        }
+
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(14px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .preview-card { animation: fadeSlideIn 0.35s var(--ease-out); }
+    </style>
+</head>
+<body>
+
+    <!-- Loading overlay (mostrato durante scan AI) -->
+    <div class="loading-overlay" id="loadingOverlay" style="background: linear-gradient(135deg, rgba(109,40,217,0.92), rgba(91,33,182,0.96)); backdrop-filter: blur(16px);">
+        <div class="spinner" style="border-top-color: #c4b5fd;"></div>
+        <div class="loading-text">Gemini AI sta leggendo lo scontrino…</div>
+        <div class="loading-sub">Estrazione piatti e quantità in corso</div>
+    </div>
+
+    {% set sidebar_active = 'sales_offload' %}
+    {% include 'components/sidebar.html' %}
+
+    <div class="main-content">
+        <div class="page-header">
+            <div class="page-title">
+                <h1>Chiusura Cassa</h1>
+                <p>Gestisci le ricette e scarica automaticamente il magazzino dalle vendite.</p>
+            </div>
+            {% include 'components/user_pill.html' %}
+        </div>
+
+        {% include 'components/flash_messages.html' %}
+
+
+        <!-- ══════════════════════════════════════════════════════════════════
+             SEZIONE 1 — GESTIONE MENU (Distinta Base)
+        ══════════════════════════════════════════════════════════════════ -->
+        <div class="card card-menu">
+            <div class="section-header-pill pill-menu">
+                <i data-lucide="book-open" style="width:13px;height:13px;"></i>
+                Gestione Menu
+            </div>
+            <div class="card-header" style="margin-top: 0;">
+                <div class="card-icon"><i data-lucide="utensils-crossed"></i></div>
+                <h3>Piatti &amp; Distinte Base</h3>
+                <span class="badge badge-muted">{{ menu_items | length }} piatti</span>
+            </div>
+
+            <!-- Form: nuovo piatto -->
+            <form action="{{ url_for('main.add_menu_item') }}" method="POST" style="margin-bottom: 20px;">
+                <div class="form-row">
+                    <input type="text" name="name" placeholder="Nome del piatto (es. Pizza Margherita)"
+                           required style="flex: 3;">
+                    <input type="number" step="0.01" min="0" name="price"
+                           placeholder="Prezzo €" required style="width: 120px;">
+                    <button type="submit" class="btn btn-primary">
+                        <i data-lucide="plus"></i> Crea Piatto
+                    </button>
+                </div>
+            </form>
+
+            <!-- Tabella piatti -->
+            {% if menu_items %}
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Piatto</th>
+                            <th>Prezzo</th>
+                            <th>Ingredienti (Distinta Base)</th>
+                            <th>Azione</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in menu_items %}
+                        <tr>
+                            <td class="text-bold">{{ item.name }}</td>
+                            <td style="color: var(--primary); font-weight: 700;">
+                                € {{ "%.2f"|format(item.price) }}
+                            </td>
+                            <td>
+                                {% if item.recipe_items %}
+                                    <span class="badge badge-success">
+                                        <i data-lucide="check-circle"></i>
+                                        {{ item.recipe_items | length }} ingredienti
+                                    </span>
+                                {% else %}
+                                    <span class="badge badge-warning">
+                                        <i data-lucide="alert-triangle"></i> Ricetta mancante
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('main.recipe', item_id=item.id) }}"
+                                   class="btn btn-secondary btn-sm">
+                                    <i data-lucide="edit-3"></i> Gestisci Ricetta
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div style="text-align:center; padding: 32px; color: var(--text-3);">
+                <i data-lucide="utensils" style="width:36px;height:36px; opacity:0.3; display:block; margin: 0 auto 12px;"></i>
+                Nessun piatto nel menu. Creane uno sopra, poi aggiungi gli ingredienti dalla pagina Ricetta.
+            </div>
+            {% endif %}
+
+            <!-- Vendita Manuale Rapida -->
+            {% if menu_items %}
+            <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border);">
+                <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 14px; display:flex; align-items:center; gap:8px;">
+                    <i data-lucide="hand-coins" style="width:15px;height:15px; color:var(--primary);"></i>
+                    Vendita Manuale Rapida
+                    <span style="font-size:11px; font-weight:400; color:var(--text-3); margin-left:4px;">— inserisci le porzioni vendute e scarica direttamente</span>
+                </h4>
+                <form action="{{ url_for('main.confirm_sale') }}" method="POST">
+                    <input type="hidden" name="source" value="manual">
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Piatto</th>
+                                    <th style="width:110px; text-align:center;">Porzioni vendute</th>
+                                    <th>Stato Ricetta</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in menu_items %}
+                                <tr>
+                                    <td class="text-bold">
+                                        <input type="hidden" name="menu_item_id" value="{{ item.id }}">
+                                        {{ item.name }}
+                                    </td>
+                                    <td style="text-align:center;">
+                                        <input type="number" name="portions" value="0"
+                                               min="0" step="1" class="qty-input">
+                                    </td>
+                                    <td>
+                                        {% if item.recipe_items %}
+                                            <span class="badge badge-success" style="font-size:11px;">
+                                                <i data-lucide="check"></i> Pronta
+                                            </span>
+                                        {% else %}
+                                            <span class="badge badge-danger" style="font-size:11px;">
+                                                <i data-lucide="x"></i> Mancante
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="flex justify-end mt-16">
+                        <button type="submit" class="btn btn-primary">
+                            <i data-lucide="arrow-down-to-line"></i> Scarica Magazzino
+                        </button>
+                    </div>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+
+
+        <!-- ══════════════════════════════════════════════════════════════════
+             SEZIONE 2 — CHIUSURA CASSA (Scanner Scontrini AI)
+        ══════════════════════════════════════════════════════════════════ -->
+        <div class="card card-scanner">
+            <div class="section-header-pill pill-scanner">
+                <i data-lucide="sparkles" style="width:13px;height:13px;"></i>
+                AI Receipt Scanner
+            </div>
+            <div class="card-header" style="margin-top: 0;">
+                <div class="card-icon" style="background: rgba(139,92,246,0.12); color: var(--accent-purple);">
+                    <i data-lucide="receipt"></i>
+                </div>
+                <h3>Scanner Scontrino</h3>
+                <span class="badge badge-ai"><i data-lucide="sparkles"></i> Gemini AI</span>
+            </div>
+
+            <!-- Upload form -->
+            <form action="{{ url_for('main.scan_receipt') }}" method="POST"
+                  enctype="multipart/form-data" id="receiptForm">
+                <div class="upload-zone" id="uploadZone"
+                     onclick="document.getElementById('receiptFile').click()">
+                    <div class="upload-zone-icon">
+                        <i data-lucide="receipt" style="width:26px;height:26px;"></i>
+                    </div>
+                    <h4>Trascina lo scontrino qui o clicca per selezionarlo</h4>
+                    <p>Formati supportati: JPG, PNG, WEBP, PDF &bull; Max 20 MB</p>
+                </div>
+                <input type="file" name="receipt_file" id="receiptFile"
+                       style="display:none;" accept=".jpg,.jpeg,.png,.webp,.pdf">
+
+                <div class="file-preview" id="filePreview">
+                    <i data-lucide="file-check" style="color:var(--accent-purple);width:18px;height:18px;"></i>
+                    <span id="fileName">Nessun file</span>
+                </div>
+
+                <div class="flex items-center gap-12 mt-16">
+                    <button type="submit" class="btn btn-purple" id="scanBtn" disabled>
+                        <i data-lucide="cpu"></i> Analizza con AI
+                    </button>
+                    <span class="text-muted text-sm">
+                        Gemini 2.0 Flash legge lo scontrino e prepara il riepilogo scarico.
+                    </span>
+                </div>
+            </form>
+
+            <!-- ── Preview vendita in attesa ── -->
+            {% if pending_sale %}
+            <div class="preview-card">
+                <div class="preview-card-header">
+                    <div class="preview-card-icon">
+                        <i data-lucide="clipboard-check" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div>
+                        <div class="preview-card-title">Riepilogo Scarico</div>
+                        <div class="preview-card-sub">
+                            Analizzato con {{ pending_sale.scan_model }} &bull;
+                            {{ pending_sale.matched_items | length }} piatti riconosciuti
+                            {% if pending_sale.unmatched_names %}
+                                &bull; {{ pending_sale.unmatched_names | length }} non trovati
+                            {% endif %}
+                        </div>
+                    </div>
+                    <span class="badge badge-ai" style="background:rgba(139,92,246,0.15); color:#5b21b6;">
+                        <i data-lucide="sparkles"></i> Pronto
+                    </span>
+                </div>
+
+                <!-- Piatti riconosciuti -->
+                {% for dish in pending_sale.matched_items %}
+                <div class="dish-block">
+                    <div class="dish-block-header">
+                        <div class="dish-name">
+                            <i data-lucide="utensils" style="width:15px;height:15px; color:var(--accent-purple);"></i>
+                            {{ dish.menu_item_name }}
+                        </div>
+                        <span class="portions-badge">× {{ dish.portions | int }} porzioni</span>
+                    </div>
+
+                    {% if dish.has_recipe and dish.deductions %}
+                        <table class="deduction-table">
+                            <thead>
+                                <tr>
+                                    <th>Ingrediente</th>
+                                    <th>Deduzione</th>
+                                    <th>Giacenza attuale</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for d in dish.deductions %}
+                                <tr>
+                                    <td>{{ d.product_name }}</td>
+                                    <td class="qty-deduct">− {{ d.total_qty }} {{ d.unit }}</td>
+                                    <td>
+                                        {% set remaining = d.current_stock - d.total_qty %}
+                                        {% if remaining <= 0 %}
+                                            <span class="stock-out">
+                                                <i data-lucide="alert-octagon" style="width:12px;height:12px;"></i>
+                                                Esaurito dopo scarico
+                                            </span>
+                                        {% elif remaining <= d.current_stock * 0.2 %}
+                                            <span class="stock-low">
+                                                <i data-lucide="alert-triangle" style="width:12px;height:12px;"></i>
+                                                {{ d.current_stock }} {{ d.unit }} → {{ remaining | round(3) }} {{ d.unit }}
+                                            </span>
+                                        {% else %}
+                                            <span class="stock-ok">
+                                                {{ d.current_stock }} {{ d.unit }} → {{ remaining | round(3) }} {{ d.unit }}
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <div class="no-recipe-warn">
+                            <i data-lucide="alert-triangle" style="width:13px;height:13px;"></i>
+                            Ricetta non definita — questo piatto non genererà scarichi di magazzino.
+                        </div>
+                    {% endif %}
+                </div>
+                {% else %}
+                <p style="color:var(--text-3); text-align:center; padding:16px 0;">
+                    Nessun piatto del menu riconosciuto nello scontrino.
+                </p>
+                {% endfor %}
+
+                <!-- Voci non riconosciute -->
+                {% if pending_sale.unmatched_names %}
+                <div style="margin-top: 12px;">
+                    <p style="font-size:12px; color:#b91c1c; font-weight:600; margin-bottom:6px;">
+                        <i data-lucide="x-circle" style="width:13px;height:13px;"></i>
+                        Voci non abbinate al menu (nessuno scarico):
+                    </p>
+                    <div class="unmatched-list">
+                        {% for name in pending_sale.unmatched_names %}
+                        <span class="unmatched-chip">{{ name }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Azioni conferma / annulla -->
+                <div class="flex gap-12 justify-end" style="margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(139,92,246,0.15);">
+                    <a href="{{ url_for('main.clear_sale_scan') }}" class="btn btn-ghost btn-sm">
+                        <i data-lucide="x"></i> Annulla
+                    </a>
+                    {% if pending_sale.matched_items | selectattr('has_recipe') | list | length > 0 %}
+                    <form action="{{ url_for('main.confirm_sale') }}" method="POST">
+                        <input type="hidden" name="source" value="receipt_scan">
+                        <button type="submit" class="btn btn-purple">
+                            <i data-lucide="arrow-down-to-line"></i>
+                            Conferma Scarico Definitivo
+                        </button>
+                    </form>
+                    {% else %}
+                    <span class="text-muted text-sm" style="align-self:center;">
+                        Nessun piatto con ricetta — scarico non disponibile.
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Info card (solo quando non c'è una scansione in attesa) -->
+            {% if not pending_sale %}
+            <div style="margin-top: 20px; background: linear-gradient(135deg, rgba(139,92,246,0.06), rgba(139,92,246,0.10)); border: 1px solid rgba(139,92,246,0.18); border-radius: var(--r-md); padding: 20px 24px;">
+                <div class="flex items-start gap-16">
+                    <div style="width:40px;height:40px; border-radius:var(--r-sm); background:rgba(139,92,246,0.12); display:flex;align-items:center;justify-content:center; color:var(--accent-purple); flex-shrink:0;">
+                        <i data-lucide="info" style="width:20px;height:20px;"></i>
+                    </div>
+                    <div>
+                        <h4 style="margin:0 0 10px; color:#4c1d95; font-size:14px;">Come funziona il Receipt Scanner</h4>
+                        <ol style="padding-left:18px; color:#5b21b6; font-size:13px; line-height:2.0;">
+                            <li>Carica la foto dello scontrino di fine giornata (o il PDF del POS)</li>
+                            <li>Gemini AI estrae i piatti venduti e le relative quantità</li>
+                            <li>Rivedi il riepilogo: vedrai quali prodotti verranno scalati dal magazzino</li>
+                            <li>Clicca "Conferma Scarico Definitivo" — la distinta base fa il resto</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+    </div><!-- /main-content -->
+
+    <script>
+        lucide.createIcons();
+
+        const receiptFile = document.getElementById('receiptFile');
+        const uploadZone  = document.getElementById('uploadZone');
+        const filePreview = document.getElementById('filePreview');
+        const fileNameEl  = document.getElementById('fileName');
+        const scanBtn     = document.getElementById('scanBtn');
+
+        function onFileSelected(file) {
+            fileNameEl.textContent = file.name;
+            filePreview.classList.add('show');
+            scanBtn.disabled = false;
+        }
+
+        receiptFile.addEventListener('change', function () {
+            if (this.files.length > 0) onFileSelected(this.files[0]);
+        });
+
+        uploadZone.addEventListener('dragover',  e => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+        uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+        uploadZone.addEventListener('drop', e => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length > 0) {
+                receiptFile.files = e.dataTransfer.files;
+                onFileSelected(e.dataTransfer.files[0]);
+            }
+        });
+
+        document.getElementById('receiptForm').addEventListener('submit', () => {
+            document.getElementById('loadingOverlay').classList.add('show');
+        });
+    </script>
+</body>
+</html>

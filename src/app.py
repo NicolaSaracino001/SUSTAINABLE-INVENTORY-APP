@@ -141,6 +141,19 @@ def create_app(config_name: str = None) -> Flask:
     with app.app_context():
         db.create_all()
         logger.info('  Database  : tabelle verificate / create ✓')
+
+        # ── Migration SQLite: aggiungi colonne mancanti a tabelle esistenti ──
+        # db.create_all() non altera tabelle già esistenti — lo facciamo noi.
+        from sqlalchemy import inspect, text
+        inspector = inspect(db.engine)
+        # Colonna notes su consumption_log (Fase 42)
+        existing_cols = [c['name'] for c in inspector.get_columns('consumption_log')]
+        if 'notes' not in existing_cols:
+            with db.engine.connect() as conn:
+                conn.execute(text('ALTER TABLE consumption_log ADD COLUMN notes VARCHAR(200)'))
+                conn.commit()
+            logger.info('  Migration : consumption_log.notes aggiunta ✓')
+
         logger.info('━' * 58)
 
     # ── Gestori errori personalizzati ──────────────────────────────────────
