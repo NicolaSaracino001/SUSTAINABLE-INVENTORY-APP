@@ -295,15 +295,37 @@ def generate_recipe_ai(item_id):
     ]
     """
 
+    MODELS_TO_TRY = ['gemini-2.0-flash', 'gemini-2.5-flash-lite']
+    response  = None
+    last_exc  = None
+    model_used = None
+
     try:
         client = genai_sdk.Client(api_key=api_key)
-        response = client.models.generate_content(
-            model='gemini-2.0-flash',
-            contents=prompt,
-            config=genai_types.GenerateContentConfig(
-                response_mime_type='application/json',
-            ),
-        )
+
+        for candidate in MODELS_TO_TRY:
+            try:
+                response = client.models.generate_content(
+                    model=candidate,
+                    contents=prompt,
+                    config=genai_types.GenerateContentConfig(
+                        response_mime_type='application/json',
+                    ),
+                )
+                model_used = candidate
+                break
+            except Exception as exc:
+                last_exc = exc
+                exc_str  = str(exc)
+                if any(k in exc_str for k in ('404', 'MODEL_NOT_FOUND', 'not found', 'PERMISSION_DENIED')):
+                    continue
+                if 'RESOURCE_EXHAUSTED' in exc_str or '429' in exc_str:
+                    continue
+                raise   # errori inattesi propagano subito
+
+        if response is None:
+            raise last_exc
+
         raw_text = response.text.replace('```json', '').replace('```', '').strip()
         suggested_items = json.loads(raw_text)
 
@@ -317,10 +339,14 @@ def generate_recipe_ai(item_id):
             db.session.add(new_r_item)
 
         db.session.commit()
-        flash("✨ Ricetta AI generata con successo!")
+        flash(f"✨ Ricetta AI generata con successo! (modello: {model_used.split('/')[-1]})")
 
     except Exception as e:
-        flash(f"❌ Errore durante la generazione AI: Riprova. Dettaglio: {str(e)}")
+        err_str = str(e)
+        if 'RESOURCE_EXHAUSTED' in err_str or '429' in err_str:
+            flash("⏳ Quota API esaurita su tutti i modelli disponibili. Riprova tra 30–60 secondi.")
+        else:
+            flash(f"❌ Errore durante la generazione AI: Riprova. Dettaglio: {str(e)}")
 
     return redirect(url_for('main.recipe', item_id=item_id))
 
