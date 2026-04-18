@@ -3,7 +3,9 @@
 
 **FoodLoop** è la piattaforma SaaS di nuova generazione progettata per trasformare la gestione della ristorazione da un onere amministrativo a un vantaggio competitivo. Grazie all'integrazione profonda con l'Intelligenza Artificiale, FoodLoop automatizza il magazzino, abbatte gli sprechi e massimizza i profitti.
 
-![logo](./assets/logo.png)
+<p align="center">
+  <img src="./assets/logo.png" width="150" alt="FoodLoop Logo">
+</p>
 
 ![Screenshot_Login](./assets/login.png)
 
