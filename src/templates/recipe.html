@@ -106,16 +106,27 @@
                         <h3>Distinta Base (BOM)</h3>
                     </div>
 
+                    <!-- Nota unità -->
+                    <div style="background: rgba(124,58,237,0.07); border: 1px solid rgba(124,58,237,0.18);
+                                border-radius: var(--r-sm); padding: 10px 14px; margin-bottom: 14px;
+                                font-size: 12px; color: #5b21b6; display: flex; align-items: center; gap: 8px;">
+                        <i data-lucide="info" style="width:14px;height:14px; flex-shrink:0;"></i>
+                        <span>Inserisci le dosi in <strong>grammi (g)</strong> per solidi e
+                        <strong>millilitri (ml)</strong> per liquidi. Per prodotti in magazzino in
+                        <strong>kg o L</strong> il valore viene convertito automaticamente
+                        (es. 250 g → 0.250 kg salvato).</span>
+                    </div>
+
                     <form action="{{ url_for('main.add_recipe_item', item_id=item.id) }}" method="POST"
                           class="form-row" style="margin-bottom: 16px;">
                         <select name="product_id" required style="flex: 2;">
                             <option value="">Seleziona ingrediente…</option>
                             {% for p in products %}
-                            <option value="{{ p.id }}">{{ p.name }} ({{ p.unit }})</option>
+                            <option value="{{ p.id }}">{{ p.name }} (magazzino: {{ p.unit }})</option>
                             {% endfor %}
                         </select>
-                        <input type="number" step="0.001" name="quantity"
-                               placeholder="Quantità" required style="flex: 1; min-width: 90px;">
+                        <input type="number" step="1" min="0.001" name="quantity"
+                               placeholder="Dose g / ml / pz" required style="flex: 1; min-width: 100px;">
                         <button type="submit" class="btn btn-primary btn-sm">
                             <i data-lucide="plus"></i>
                         </button>
@@ -127,7 +138,7 @@
                             <thead>
                                 <tr>
                                     <th>Ingrediente</th>
-                                    <th>Dose (1 porzione)</th>
+                                    <th>Dose per porzione</th>
                                     <th></th>
                                 </tr>
                             </thead>
@@ -135,7 +146,9 @@
                                 {% for r in recipe_items %}
                                 <tr>
                                     <td class="text-bold">{{ r.product.name }}</td>
-                                    <td class="text-muted">{{ r.quantity_needed }} {{ r.product.unit }}</td>
+                                    <td class="text-muted">
+                                        {{ r.quantity_needed | round(5) }} {{ r.product.unit }}
+                                    </td>
                                     <td style="text-align: right;">
                                         <form action="{{ url_for('main.delete_recipe_item', recipe_item_id=r.id) }}"
                                               method="POST" style="margin:0;">

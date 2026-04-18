@@ -17,6 +17,48 @@ import requests
 
 main = Blueprint('main', __name__)
 
+
+def _convert_heic_to_jpeg(heic_path: str) -> str:
+    """
+    Converte un file HEIC/HEIF in JPEG usando pillow-heif.
+    Elimina il file originale e restituisce il percorso del JPEG risultante.
+    Solleva ImportError se pillow-heif non è installato.
+    """
+    import pillow_heif          # noqa: F401 — registra il codec HEIF in Pillow
+    from PIL import Image
+    pillow_heif.register_heif_opener()
+
+    jpeg_path = heic_path.rsplit('.', 1)[0] + '.jpg'
+    with Image.open(heic_path) as img:
+        img.convert('RGB').save(jpeg_path, 'JPEG', quality=92)
+    os.remove(heic_path)
+    return jpeg_path
+
+
+# Unità che richiedono la conversione g/ml → kg/L al salvataggio della ricetta
+_KG_L_UNITS = {
+    'kg', 'kilo', 'kilogrammi', 'chilogrammi', 'chilogrammo',
+    'l', 'lt', 'litri', 'liter', 'litre', 'litro',
+}
+
+
+def _to_stock_unit(quantity_in_g_or_ml: float, product) -> tuple:
+    """
+    Converte una quantità inserita in g/ml nell'unità di misura del prodotto a magazzino.
+
+    Se il prodotto è in kg o L → divide per 1000 (es. 250g → 0.250 kg).
+    Altrimenti restituisce il valore invariato (pz, g, ml, etc.).
+
+    Returns:
+        (quantity_converted, unit_string)
+    """
+    if product is None:
+        return quantity_in_g_or_ml, ''
+    unit = (product.unit or '').lower().strip()
+    if unit in _KG_L_UNITS:
+        return quantity_in_g_or_ml / 1000.0, product.unit
+    return quantity_in_g_or_ml, product.unit
+
 @main.before_request
 def check_password_change():
     if current_user.is_authenticated:
@@ -256,11 +298,17 @@ def update_recipe_details(item_id):
 @login_required
 def add_recipe_item(item_id):
     product_id = request.form.get('product_id')
-    quantity = float(request.form.get('quantity'))
+    quantity   = float(request.form.get('quantity'))
+
+    # L'utente inserisce in g o ml; convertiamo in kg/L se necessario
+    # così il DB salva sempre nell'unità del magazzino (es. 30g → 0.030 kg).
+    product = Product.query.get(product_id)
+    quantity, display_unit = _to_stock_unit(quantity, product)
+
     new_recipe_item = RecipeItem(menu_item_id=item_id, product_id=product_id, quantity_needed=quantity)
     db.session.add(new_recipe_item)
     db.session.commit()
-    flash("Ingrediente collegato alla ricetta.")
+    flash(f"Ingrediente collegato alla ricetta ({round(quantity, 5)} {display_unit}).")
     return redirect(url_for('main.recipe', item_id=item_id))
 
 @main.route('/generate_recipe_ai/<int:item_id>', methods=['POST'])
@@ -278,20 +326,26 @@ def generate_recipe_ai(item_id):
         flash("❌ Il tuo magazzino è vuoto. Aggiungi materie prime prima di usare l'AI.")
         return redirect(url_for('main.recipe', item_id=item_id))
 
-    inventory_list = "\n".join([f"ID: {p.id} | Nome: {p.name} | Unità: {p.unit}" for p in products])
-    
+    inventory_list = "\n".join(
+        [f"ID: {p.id} | Nome: {p.name} | Unità magazzino: {p.unit}" for p in products]
+    )
+
     prompt = f"""
     Sei l'Executive Chef di un ristorante e devi creare la distinta base per il piatto: "{item.name}".
     Hai a disposizione SOLO questi ingredienti nel tuo magazzino:
-    
+
     {inventory_list}
-    
-    Scegli SOLO gli ingredienti strettamente necessari per questo piatto presenti nella lista. 
-    Stima una quantità logica per 1 singola porzione, rispettando l'unità di misura indicata (es. se è in 'kg', scrivi 0.1 per 100 grammi).
-    
-    Devi rispondere ESATTAMENTE E SOLO con un array JSON in questo formato, senza markdown, senza spiegazioni, senza virgolette extra:
+
+    REGOLE OBBLIGATORIE sulle quantità (per 1 singola porzione):
+    - Esprimi SEMPRE le dosi in GRAMMI (g) per ingredienti solidi/secchi (es. farina 250, riso 180, sale 5).
+    - Esprimi SEMPRE le dosi in MILLILITRI (ml) per i liquidi (es. olio 30, acqua 100, vino 50).
+    - Per ingredienti venduti a "pezzi" (pz, unità) usa il numero intero di pezzi (es. uova 2, limoni 1).
+    - NON usare kg o L — usa sempre la forma base (g, ml, pz).
+    - Stima quantità realistiche per una porzione da ristorante.
+
+    Devi rispondere ESATTAMENTE E SOLO con un array JSON, senza markdown, senza spiegazioni:
     [
-        {{"product_id": numero_id, "quantity": quantita_decimale}}
+        {{"product_id": numero_id, "quantity": quantita_in_g_o_ml_o_pz}}
     ]
     """
 
@@ -331,10 +385,17 @@ def generate_recipe_ai(item_id):
 
         RecipeItem.query.filter_by(menu_item_id=item.id).delete()
         for ing in suggested_items:
+            pid     = int(ing['product_id'])
+            qty_raw = float(ing['quantity'])
+
+            # L'AI restituisce in g/ml → converti in unità del magazzino prima di salvare
+            prod = Product.query.get(pid)
+            qty_stored, _ = _to_stock_unit(qty_raw, prod)
+
             new_r_item = RecipeItem(
                 menu_item_id=item.id,
-                product_id=int(ing['product_id']),
-                quantity_needed=float(ing['quantity'])
+                product_id=pid,
+                quantity_needed=qty_stored
             )
             db.session.add(new_r_item)
 
@@ -745,10 +806,11 @@ def scan_invoice():
     mime_map = {
         'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
         'png': 'image/png', 'webp': 'image/webp',
-        'pdf': 'application/pdf'
+        'pdf': 'application/pdf',
+        'heic': 'image/heic', 'heif': 'image/heic',   # convertiti subito dopo il salvataggio
     }
     if ext not in mime_map:
-        flash("❌ Formato non supportato. Carica un file JPG, PNG, WEBP o PDF.")
+        flash("❌ Formato non supportato. Carica un file JPG, PNG, WEBP, HEIC o PDF.")
         return redirect(url_for('main.invoice_scanner'))
 
     mime_type = mime_map[ext]
@@ -761,6 +823,22 @@ def scan_invoice():
     filepath = os.path.join(upload_folder, filename)
     file.save(filepath)
     logger.info(f"File salvato temporaneamente: {filepath} ({mime_type})")
+
+    # ── Conversione HEIC → JPEG (foto iPhone) ─────────────────────────────────
+    if ext in ('heic', 'heif'):
+        try:
+            filepath  = _convert_heic_to_jpeg(filepath)
+            mime_type = 'image/jpeg'
+            ext       = 'jpg'
+            logger.info(f"File HEIC convertito in JPEG: {filepath}")
+        except Exception as heic_err:
+            try:
+                os.remove(filepath)
+            except Exception:
+                pass
+            logger.error(f"Conversione HEIC fallita: {heic_err}")
+            flash("❌ Impossibile convertire il file HEIC. Assicurati che pillow-heif sia installato.")
+            return redirect(url_for('main.invoice_scanner'))
 
     gemini_file_ref = None   # traccia l'eventuale file caricato su Files API
 
@@ -1059,12 +1137,14 @@ def process_sale(user_id, sold_items_list, source='manual'):
             product = Product.query.get(r_item.product_id)
             if not product or product.user_id != user_id:
                 continue
+            # quantity_needed è già in unità del magazzino (conversione avviene al salvataggio)
             needed = r_item.quantity_needed * portions
             if product.quantity < needed:
                 raise ValueError(
                     f"Scorte insufficienti per '{product.name}': "
-                    f"disponibile {round(product.quantity, 3)} {product.unit}, "
-                    f"richiesto {round(needed, 3)} per '{menu_item.name}' x{portions}"
+                    f"disponibile {round(product.quantity, 4)} {product.unit}, "
+                    f"richiesto {round(needed, 4)} {product.unit} "
+                    f"per '{menu_item.name}' x{portions}"
                 )
 
     # ── Crea SaleLog ──────────────────────────────────────────────────────────
@@ -1096,8 +1176,9 @@ def process_sale(user_id, sold_items_list, source='manual'):
             if not product or product.user_id != user_id:
                 continue
 
-            qty_used          = r_item.quantity_needed * portions
-            product.quantity  = max(0.0, product.quantity - qty_used)
+            # quantity_needed è già in unità del magazzino — moltiplicazione diretta
+            qty_used = r_item.quantity_needed * portions
+            product.quantity = max(0.0, product.quantity - qty_used)
 
             log_entry = ConsumptionLog(
                 user_id=user_id,
@@ -1108,8 +1189,8 @@ def process_sale(user_id, sold_items_list, source='manual'):
             db.session.add(log_entry)
             deducted_count += 1
             _sale_logger.info(
-                f"  Scaricato: '{product.name}' -{round(qty_used, 4)} {product.unit} "
-                f"← '{menu_item.name}' x{portions}  (giacenza ora: {round(product.quantity, 4)})"
+                f"  Scaricato: '{product.name}' -{round(qty_used, 6)} {product.unit} "
+                f"← '{menu_item.name}' x{portions}  (giacenza ora: {round(product.quantity, 6)})"
             )
 
     db.session.commit()
@@ -1182,10 +1263,11 @@ def scan_receipt():
     mime_map = {
         'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
         'png': 'image/png', 'webp': 'image/webp',
-        'pdf': 'application/pdf'
+        'pdf': 'application/pdf',
+        'heic': 'image/heic', 'heif': 'image/heic',   # convertiti subito dopo il salvataggio
     }
     if ext not in mime_map:
-        flash("❌ Formato non supportato. Carica JPG, PNG, WEBP o PDF.")
+        flash("❌ Formato non supportato. Carica JPG, PNG, WEBP, HEIC o PDF.")
         return redirect(url_for('main.sales_offload'))
 
     mime_type = mime_map[ext]
@@ -1197,6 +1279,22 @@ def scan_receipt():
     filepath = os.path.join(tmp_folder, filename)
     file.save(filepath)
     logger.info(f"File scontrino salvato: {filepath} ({mime_type})")
+
+    # ── Conversione HEIC → JPEG (foto iPhone) ─────────────────────────────────
+    if ext in ('heic', 'heif'):
+        try:
+            filepath  = _convert_heic_to_jpeg(filepath)
+            mime_type = 'image/jpeg'
+            ext       = 'jpg'
+            logger.info(f"File HEIC convertito in JPEG: {filepath}")
+        except Exception as heic_err:
+            try:
+                os.remove(filepath)
+            except Exception:
+                pass
+            logger.error(f"Conversione HEIC fallita: {heic_err}")
+            flash("❌ Impossibile convertire il file HEIC. Assicurati che pillow-heif sia installato.")
+            return redirect(url_for('main.sales_offload'))
 
     gemini_file_ref = None
     response        = None
