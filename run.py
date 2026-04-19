@@ -9,5 +9,6 @@ from src.app import create_app
 app = create_app()
 
 if __name__ == '__main__':
-    # Avvia l'applicazione sulla porta 5000
-    app.run(debug=True)
+    port  = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get('FLASK_ENV', 'development') != 'production'
+    app.run(debug=debug, host='0.0.0.0', port=port)

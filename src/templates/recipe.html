@@ -47,7 +47,7 @@
                     </div>
 
                     {% if item.image_file and item.image_file != 'default.jpg' %}
-                        <img src="{{ url_for('static', filename='recipes_img/' + item.image_file) }}"
+                        <img src="{{ url_for('main.serve_upload', filename='recipes_img/' + item.image_file) }}"
                              class="recipe-img" alt="Foto Piatto">
                     {% endif %}
 

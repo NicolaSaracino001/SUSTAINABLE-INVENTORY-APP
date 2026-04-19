@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, current_app, session, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, send_from_directory, current_app, session, jsonify
 from flask_login import login_required, current_user
 from src.models.models import MenuItem, RecipeItem, Product, ConsumptionLog, User, Supplier, WasteLog, SaleLog, db
 from datetime import datetime, timedelta
@@ -16,6 +16,36 @@ import urllib.parse
 import requests
 
 main = Blueprint('main', __name__)
+
+
+def _upload_dir(subdir: str) -> str:
+    """
+    Restituisce la directory scrivibile per i file caricati dagli utenti.
+    - Vercel / produzione: il filesystem è read-only, quindi usiamo /tmp/foodloop/<subdir>.
+    - Locale (development): src/static/<subdir>, così i file sono servibili come static assets.
+    La directory viene creata se non esiste.
+    """
+    if os.environ.get('VERCEL') or os.environ.get('FLASK_ENV') == 'production':
+        base = '/tmp/foodloop'
+    else:
+        base = os.path.join(current_app.root_path, 'static')
+    path = os.path.join(base, subdir)
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
+@main.route('/uploads/<path:filename>')
+@login_required
+def serve_upload(filename):
+    """
+    Serve i file caricati dagli utenti (avatar, immagini ricette, ecc.).
+    In produzione (Vercel) i file risiedono in /tmp/foodloop/; in locale in static/.
+    """
+    if os.environ.get('VERCEL') or os.environ.get('FLASK_ENV') == 'production':
+        base = '/tmp/foodloop'
+    else:
+        base = os.path.join(current_app.root_path, 'static')
+    return send_from_directory(base, filename)
 
 
 def _convert_heic_to_jpeg(heic_path: str) -> str:
@@ -285,8 +315,7 @@ def update_recipe_details(item_id):
         if pic.filename != '':
             filename = secure_filename(pic.filename)
             unique_name = str(uuid.uuid4().hex) + "_" + filename
-            upload_folder = os.path.join(current_app.root_path, 'static', 'recipes_img')
-            os.makedirs(upload_folder, exist_ok=True)
+            upload_folder = _upload_dir('recipes_img')
             pic.save(os.path.join(upload_folder, unique_name))
             item.image_file = unique_name
 
@@ -725,8 +754,7 @@ def update_avatar():
                 flash("❌ Formato non supportato. Carica un'immagine JPG, PNG, GIF o WEBP.")
                 return redirect(url_for('main.profile'))
             unique_name = f"{uuid.uuid4().hex}.{ext}"   # nome completamente anonimo
-            upload_folder = os.path.join(current_app.root_path, 'static', 'avatars')
-            os.makedirs(upload_folder, exist_ok=True)
+            upload_folder = _upload_dir('avatars')
             pic.save(os.path.join(upload_folder, unique_name))
             current_user.profile_image = unique_name
             db.session.commit()
@@ -745,8 +773,7 @@ def update_avatar():
             response = requests.get(url)
             if response.status_code == 200:
                 unique_name = f"avatar_{current_user.id}_{avatar_type}.svg"
-                upload_folder = os.path.join(current_app.root_path, 'static', 'avatars')
-                os.makedirs(upload_folder, exist_ok=True)
+                upload_folder = _upload_dir('avatars')
                 with open(os.path.join(upload_folder, unique_name), 'wb') as f:
                     f.write(response.content)
                 current_user.profile_image = unique_name
@@ -767,7 +794,7 @@ def invoice_scanner():
     result_id = session.get('invoice_scan_result_id')
     scan_result = None
     if result_id:
-        result_path = os.path.join(current_app.root_path, 'static', 'invoice_tmp', f'result_{result_id}.json')
+        result_path = os.path.join(_upload_dir('invoice_tmp'), f'result_{result_id}.json')
         if os.path.exists(result_path):
             with open(result_path, 'r') as f:
                 scan_result = json.load(f)
@@ -817,8 +844,7 @@ def scan_invoice():
     is_pdf = ext == 'pdf'
 
     # Salva file temporaneo
-    upload_folder = os.path.join(current_app.root_path, 'static', 'invoice_tmp')
-    os.makedirs(upload_folder, exist_ok=True)
+    upload_folder = _upload_dir('invoice_tmp')
     filename = f"inv_{current_user.id}_{uuid.uuid4().hex}.{ext}"
     filepath = os.path.join(upload_folder, filename)
     file.save(filepath)
@@ -937,7 +963,7 @@ def scan_invoice():
         scan_data = json.loads(raw_text)
         logger.info(f"JSON parsato correttamente. Prodotti trovati: {len(scan_data.get('products', []))}")
 
-        # Salva risultato in file JSON temporaneo
+        # Salva risultato JSON temporaneo nella stessa directory del file caricato
         result_id = uuid.uuid4().hex
         result_path = os.path.join(upload_folder, f'result_{result_id}.json')
         with open(result_path, 'w', encoding='utf-8') as f:
@@ -1006,8 +1032,7 @@ def clear_invoice_scan():
     """Elimina il risultato di scansione corrente dalla sessione."""
     result_id = session.pop('invoice_scan_result_id', None)
     if result_id:
-        upload_folder = os.path.join(current_app.root_path, 'static', 'invoice_tmp')
-        result_path = os.path.join(upload_folder, f'result_{result_id}.json')
+        result_path = os.path.join(_upload_dir('invoice_tmp'), f'result_{result_id}.json')
         try:
             os.remove(result_path)
         except Exception:
@@ -1024,7 +1049,7 @@ def apply_invoice_update():
         flash("❌ Nessun risultato di scansione trovato. Ricarica una fattura.")
         return redirect(url_for('main.invoice_scanner'))
 
-    upload_folder = os.path.join(current_app.root_path, 'static', 'invoice_tmp')
+    upload_folder = _upload_dir('invoice_tmp')
     result_path = os.path.join(upload_folder, f'result_{result_id}.json')
 
     try:
@@ -1214,8 +1239,7 @@ def sales_offload():
     pending_sale = None
     result_id    = session.get('sale_scan_result_id')
     if result_id:
-        tmp_folder  = os.path.join(current_app.root_path, 'static', 'sale_tmp')
-        result_path = os.path.join(tmp_folder, f'result_{result_id}.json')
+        result_path = os.path.join(_upload_dir('sale_tmp'), f'result_{result_id}.json')
         if os.path.exists(result_path):
             with open(result_path, 'r', encoding='utf-8') as f:
                 pending_sale = json.load(f)
@@ -1273,8 +1297,7 @@ def scan_receipt():
     mime_type = mime_map[ext]
     is_pdf    = ext == 'pdf'
 
-    tmp_folder = os.path.join(current_app.root_path, 'static', 'sale_tmp')
-    os.makedirs(tmp_folder, exist_ok=True)
+    tmp_folder = _upload_dir('sale_tmp')
     filename = f"rec_{current_user.id}_{uuid.uuid4().hex}.{ext}"
     filepath = os.path.join(tmp_folder, filename)
     file.save(filepath)
@@ -1517,8 +1540,7 @@ def confirm_sale():
             flash("❌ Nessuna vendita in attesa trovata.")
             return redirect(url_for('main.sales_offload'))
 
-        tmp_folder  = os.path.join(current_app.root_path, 'static', 'sale_tmp')
-        result_path = os.path.join(tmp_folder, f'result_{result_id}.json')
+        result_path = os.path.join(_upload_dir('sale_tmp'), f'result_{result_id}.json')
         try:
             with open(result_path, 'r', encoding='utf-8') as f:
                 pending = json.load(f)
@@ -1574,8 +1596,7 @@ def clear_sale_scan():
     """Elimina la vendita in attesa dalla sessione."""
     result_id = session.pop('sale_scan_result_id', None)
     if result_id:
-        tmp_folder  = os.path.join(current_app.root_path, 'static', 'sale_tmp')
-        result_path = os.path.join(tmp_folder, f'result_{result_id}.json')
+        result_path = os.path.join(_upload_dir('sale_tmp'), f'result_{result_id}.json')
         try:
             os.remove(result_path)
         except Exception:
