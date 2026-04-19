@@ -7,16 +7,15 @@ db = SQLAlchemy()
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(150), unique=True, nullable=False)
-    password_hash = db.Column(db.String(150), nullable=False)
-    full_name = db.Column(db.String(150), nullable=False)
-    restaurant_name = db.Column(db.String(150))
+    email = db.Column(db.String(255), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)  # scrypt hash supera 150 char
+    full_name = db.Column(db.String(255), nullable=False)
+    restaurant_name = db.Column(db.String(255))
     role = db.Column(db.String(50), default='owner')
     parent_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     must_change_password = db.Column(db.Boolean, default=False)
     monthly_budget = db.Column(db.Float, default=0.0)
-    # NUOVO CAMPO: Foto Profilo
-    profile_image = db.Column(db.String(150), default='default')
+    profile_image = db.Column(db.String(255), default='default')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -37,7 +36,7 @@ class User(UserMixin, db.Model):
 
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(150), nullable=False)
+    name = db.Column(db.String(255), nullable=False)
     quantity = db.Column(db.Float, nullable=False)
     unit = db.Column(db.String(50), nullable=False)
     min_threshold = db.Column(db.Float, nullable=False)
@@ -49,19 +48,19 @@ class Product(db.Model):
 
 class Supplier(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(150), nullable=False)
+    name = db.Column(db.String(255), nullable=False)
     contact_info = db.Column(db.String(250), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False,
                         index=True)
 
 class MenuItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(150), nullable=False)
+    name = db.Column(db.String(255), nullable=False)
     price = db.Column(db.Float, nullable=False)
     prep_time = db.Column(db.Integer)
     allergens = db.Column(db.String(200))
     instructions = db.Column(db.Text)
-    image_file = db.Column(db.String(150), default='default.jpg')
+    image_file = db.Column(db.String(255), default='default.jpg')
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
 class RecipeItem(db.Model):
