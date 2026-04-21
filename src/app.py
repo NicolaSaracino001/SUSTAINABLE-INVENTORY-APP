@@ -4,9 +4,13 @@ from datetime import timedelta
 from flask import Flask, redirect, url_for, render_template
 from flask_login import LoginManager
 from dotenv import load_dotenv
+import cloudinary
 from src.models.models import db, User
 
 load_dotenv()
+
+# ── Cloudinary — lettura automatica di CLOUDINARY_URL dall'ambiente ───────────
+cloudinary.config()   # legge CLOUDINARY_URL se presente, non-op altrimenti
 
 # ── Logging centralizzato ──────────────────────────────────────────────────────
 def setup_logging():
@@ -153,6 +157,25 @@ def create_app(config_name: str = None) -> Flask:
                 conn.execute(text('ALTER TABLE consumption_log ADD COLUMN notes VARCHAR(200)'))
                 conn.commit()
             logger.info('  Migration : consumption_log.notes aggiunta ✓')
+
+        # Fase 43.3 — profile_image allargato a VARCHAR(500) per URL Cloudinary
+        user_cols = {c['name']: c for c in inspector.get_columns('user')}
+        if 'profile_image' in user_cols:
+            col_type = str(user_cols['profile_image']['type'])
+            if '255' in col_type:
+                dialect = db.engine.dialect.name
+                try:
+                    with db.engine.connect() as conn:
+                        if dialect == 'postgresql':
+                            conn.execute(text(
+                                'ALTER TABLE "user" ALTER COLUMN profile_image TYPE VARCHAR(500)'
+                            ))
+                        # SQLite non supporta ALTER COLUMN TYPE — la nuova colonna
+                        # nasce già a 500 char per i nuovi DB, i vecchi sono in memoria
+                        conn.commit()
+                    logger.info('  Migration : user.profile_image → VARCHAR(500) ✓')
+                except Exception:
+                    pass   # già aggiornata o non necessario
 
         logger.info('━' * 58)
 

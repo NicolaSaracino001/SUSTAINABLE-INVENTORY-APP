@@ -740,6 +740,8 @@ def add_staff():
 @main.route('/update_avatar', methods=['POST'])
 @login_required
 def update_avatar():
+    import cloudinary.uploader
+
     # Whitelist estensioni immagine — blocca upload di file eseguibili
     ALLOWED_AVATAR_EXT = {'jpg', 'jpeg', 'png', 'gif', 'webp'}
 
@@ -753,34 +755,30 @@ def update_avatar():
             if ext not in ALLOWED_AVATAR_EXT:
                 flash("❌ Formato non supportato. Carica un'immagine JPG, PNG, GIF o WEBP.")
                 return redirect(url_for('main.profile'))
-            unique_name = f"{uuid.uuid4().hex}.{ext}"   # nome completamente anonimo
-            upload_folder = _upload_dir('avatars')
-            pic.save(os.path.join(upload_folder, unique_name))
-            current_user.profile_image = unique_name
-            db.session.commit()
-            flash("Foto profilo personalizzata caricata!")
+            try:
+                result = cloudinary.uploader.upload(
+                    pic,
+                    folder='foodloop/avatars',
+                    public_id=f"user_{current_user.id}_{uuid.uuid4().hex[:8]}",
+                    overwrite=True,
+                    resource_type='image',
+                )
+                current_user.profile_image = result['secure_url']
+                db.session.commit()
+                flash("Foto profilo personalizzata caricata!")
+            except Exception as e:
+                flash(f"❌ Errore durante l'upload dell'immagine: {type(e).__name__}")
         else:
             flash("Nessuna foto selezionata.")
-            
+
     elif avatar_type in ['robot', 'human']:
-        # Genera un avatar unico basato sul nome
+        # Salva direttamente l'URL pubblico DiceBear — nessun file locale
         safe_name = urllib.parse.quote(current_user.full_name)
         style = "bottts" if avatar_type == 'robot' else "avataaars"
-        url = f"https://api.dicebear.com/7.x/{style}/svg?seed={safe_name}&backgroundColor=e2e8f0"
-        
-        try:
-            # Scarica l'immagine e salvala nel magazzino di FoodLoop
-            response = requests.get(url)
-            if response.status_code == 200:
-                unique_name = f"avatar_{current_user.id}_{avatar_type}.svg"
-                upload_folder = _upload_dir('avatars')
-                with open(os.path.join(upload_folder, unique_name), 'wb') as f:
-                    f.write(response.content)
-                current_user.profile_image = unique_name
-                db.session.commit()
-                flash(f"Avatar generato e salvato con successo! 🎨")
-        except Exception as e:
-            flash("Errore durante la generazione dell'avatar.")
+        avatar_url = f"https://api.dicebear.com/7.x/{style}/svg?seed={safe_name}&backgroundColor=e2e8f0"
+        current_user.profile_image = avatar_url
+        db.session.commit()
+        flash("Avatar generato e salvato con successo!")
 
     return redirect(url_for('main.profile'))
 

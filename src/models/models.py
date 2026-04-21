@@ -15,7 +15,7 @@ class User(UserMixin, db.Model):
     parent_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     must_change_password = db.Column(db.Boolean, default=False)
     monthly_budget = db.Column(db.Float, default=0.0)
-    profile_image = db.Column(db.String(255), default='default')
+    profile_image = db.Column(db.String(500), default='default')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

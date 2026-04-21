@@ -1,7 +1,11 @@
 <div class="user-pill">
     {% if current_user.profile_image and current_user.profile_image != 'default' %}
-        <img src="{{ url_for('main.serve_upload', filename='avatars/' + current_user.profile_image) }}"
-             class="avatar" alt="Avatar">
+        {% if current_user.profile_image.startswith('http') %}
+            <img src="{{ current_user.profile_image }}" class="avatar" alt="Avatar">
+        {% else %}
+            <img src="{{ url_for('main.serve_upload', filename='avatars/' + current_user.profile_image) }}"
+                 class="avatar" alt="Avatar">
+        {% endif %}
     {% else %}
         <div class="avatar">{{ current_user.full_name[0] | upper }}</div>
     {% endif %}
