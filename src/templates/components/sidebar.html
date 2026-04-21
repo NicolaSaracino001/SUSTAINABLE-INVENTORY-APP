@@ -61,3 +61,32 @@
         </a>
     </div>
 </div>
+
+<!-- ═══ Mobile Bottom Navigation (visibile solo su ≤768px) ═══ -->
+<nav class="mobile-bottom-nav">
+    <a href="{{ url_for('main.dashboard') }}"
+       class="mobile-nav-item {% if sidebar_active == 'dashboard' %}active{% endif %}">
+        <i data-lucide="layout-dashboard"></i>
+        <span>Home</span>
+    </a>
+    <a href="{{ url_for('main.inventory') }}"
+       class="mobile-nav-item {% if sidebar_active == 'inventory' %}active{% endif %}">
+        <i data-lucide="package"></i>
+        <span>Magazzino</span>
+    </a>
+    <a href="{{ url_for('main.sales_offload') }}"
+       class="mobile-nav-item {% if sidebar_active == 'sales_offload' %}active{% endif %}">
+        <i data-lucide="receipt"></i>
+        <span>Cassa</span>
+    </a>
+    <a href="{{ url_for('main.analytics') }}"
+       class="mobile-nav-item {% if sidebar_active == 'analytics' %}active{% endif %}">
+        <i data-lucide="pie-chart"></i>
+        <span>Report</span>
+    </a>
+    <a href="{{ url_for('main.profile') }}"
+       class="mobile-nav-item {% if sidebar_active == 'profile' %}active{% endif %}">
+        <i data-lucide="user"></i>
+        <span>Account</span>
+    </a>
+</nav>
