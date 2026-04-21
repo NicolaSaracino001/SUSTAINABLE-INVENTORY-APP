@@ -1012,3 +1012,23 @@ body.auth-page::before { display: none; }
 .w-full   { width: 100%; }
 .hidden   { display: none; }
 .overflow-x-auto { overflow-x: auto; }
+
+/* ============================================================
+   Turbo Drive — Transizioni Fase 43.2
+   ============================================================ */
+
+/* Barra di caricamento stile FoodLoop */
+.turbo-progress-bar {
+  height: 3px;
+  background-color: #28a745;
+}
+
+/* Animazione di entrata per i contenuti caricati da Turbo */
+body {
+  animation: fadeIn 0.4s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
