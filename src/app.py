@@ -73,6 +73,10 @@ class ProductionConfig(Config):
     TESTING = False
     SESSION_COOKIE_SECURE = True    # Solo su HTTPS in produzione
 
+    # Cache di 1 anno per gli asset statici (logo, CSS, JS).
+    # Sicuro perché usiamo ?v=N come cache-buster sul filename.
+    SEND_FILE_MAX_AGE_DEFAULT = timedelta(days=365)
+
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', '')
 
     @classmethod
