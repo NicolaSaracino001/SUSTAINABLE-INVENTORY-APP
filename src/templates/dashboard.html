@@ -88,20 +88,15 @@
     </div>
 
     <script>
-        // turbo:load scatta sia al primo caricamento che ad ogni navigazione Turbo.
-        // Sostituisce DOMContentLoaded, che non scatta durante le navigazioni SPA.
-        document.addEventListener('turbo:load', function () {
+        function renderStockChart() {
             lucide.createIcons();
 
             const canvas = document.getElementById('inventoryChart');
             if (!canvas) return;
 
-            // Chart.getChart() è l'API nativa di Chart.js v3+ per recuperare
-            // l'istanza associata a un canvas. Se esiste, la distruggiamo prima
-            // di crearne una nuova — evita l'errore "Canvas is already in use"
-            // quando Turbo riusa il DOM senza ricaricare la pagina.
-            const existingChart = Chart.getChart('inventoryChart');
-            if (existingChart) { existingChart.destroy(); }
+            // Distrugge l'istanza precedente se il canvas è già in uso.
+            // Necessario perché Turbo riusa il DOM senza ricaricare la pagina.
+            Chart.getChart('inventoryChart')?.destroy();
 
             // Debug: verifica i dati raw provenienti dal backend
             console.log("Labels ricevute:",  {{ chart_labels      | tojson | safe }});
@@ -169,7 +164,28 @@
                     }
                 }
             });
-        });
+        }
+
+        // ── Strategia di invocazione doppia ──────────────────────────────────
+        //
+        // 1. Chiamata diretta: copre il primo caricamento completo della pagina
+        //    (es. dopo login/redirect) e la ri-esecuzione del body script nelle
+        //    navigazioni Turbo (Turbo rivaluta gli script del <body> ad ogni visita).
+        //
+        // 2. turbo:load listener: safety net per casi in cui Turbo gestisce la
+        //    transizione prima che lo script venga ri-eseguito.
+        //    Il flag window._stockChartListenerAdded evita di accumulare listener
+        //    duplicati ad ogni ri-esecuzione del body script.
+        //
+        // Chart.getChart()?.destroy() all'inizio di renderStockChart() rende
+        // sicura qualsiasi doppia chiamata senza lasciare istanze orfane.
+
+        renderStockChart();
+
+        if (!window._stockChartListenerAdded) {
+            document.addEventListener('turbo:load', renderStockChart);
+            window._stockChartListenerAdded = true;
+        }
     </script>
 </body>
 </html>
