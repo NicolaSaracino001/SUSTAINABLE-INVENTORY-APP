@@ -45,6 +45,53 @@
             </div>
         </div>
 
+        <!-- Azioni Urgenti (Smart Alerts) -->
+        {% if smart_alerts %}
+        <div class="card" style="border-left: 4px solid #ef4444; margin-bottom: 24px;">
+            <div class="card-header">
+                <div class="card-icon" style="background:#fef2f2;color:#ef4444;">
+                    <i data-lucide="zap"></i>
+                </div>
+                <h3>Azioni Urgenti</h3>
+                <span class="badge badge-danger">{{ smart_alerts | length }}</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px;padding:0 4px 4px;">
+                {% for alert in smart_alerts %}
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-radius:10px;background:{% if alert.severity == 'Critico' %}#fef2f2{% else %}#fffbeb{% endif %};">
+                    <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0;">
+                        <span class="badge {% if alert.severity == 'Critico' %}badge-danger{% else %}badge-warning{% endif %}" style="flex-shrink:0;">
+                            {% if alert.severity == 'Critico' %}🔴 Critico{% else %}⚠️ Attenzione{% endif %}
+                        </span>
+                        <span style="font-size:14px;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                            Ordina subito <strong>{{ alert.product.name }}</strong>
+                            {% if alert.autonomy == 'In elaborazione' %}
+                            — giacenza sotto la soglia minima
+                            {% else %}
+                            — scorte in esaurimento tra <strong>{{ alert.autonomy }} giorni</strong>
+                            {% endif %}
+                        </span>
+                    </div>
+                    <a href="{{ url_for('main.suppliers') }}" class="btn btn-sm btn-secondary" style="flex-shrink:0;">
+                        <i data-lucide="shopping-cart"></i> Lista Ordini
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="card" style="border-left:4px solid #22c55e;margin-bottom:24px;padding:16px 20px;">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div class="card-icon" style="background:#f0fdf4;color:#16a34a;flex-shrink:0;">
+                    <i data-lucide="shield-check"></i>
+                </div>
+                <div>
+                    <div style="font-weight:600;color:#15803d;font-size:14px;">Tutto sotto controllo</div>
+                    <div style="font-size:13px;color:#64748b;">Il magazzino è in salute — nessun prodotto richiede ordini urgenti.</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <!-- Charts + Alerts -->
         <div class="grid-auto">
             <div class="card">

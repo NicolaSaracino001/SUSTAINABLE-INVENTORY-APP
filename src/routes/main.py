@@ -147,6 +147,30 @@ def dashboard():
         else:
             stock_autonomy[p.id] = round(p.quantity / avg_daily)
     
+    # Smart alerts: prodotti che richiedono azione urgente.
+    # Criteri: giacenza sotto soglia minima OPPURE autonomia predittiva ≤ 3 giorni.
+    # Gravità: 'Critico' se autonomia < 1 giorno, altrimenti 'Attenzione'.
+    smart_alerts = []
+    for p in all_products:
+        autonomy = stock_autonomy.get(p.id)
+        is_low_stock = p.quantity <= p.min_threshold
+        days_val = None if autonomy == 'In elaborazione' else autonomy
+        is_critical_autonomy = days_val is not None and days_val <= 3
+
+        if is_low_stock or is_critical_autonomy:
+            if days_val is not None and days_val < 1:
+                severity = 'Critico'
+            else:
+                severity = 'Attenzione'
+            smart_alerts.append({
+                'product': p,
+                'autonomy': autonomy,
+                'severity': severity,
+            })
+
+    # Ordina: Critico prima di Attenzione, poi alfabeticamente per nome prodotto.
+    smart_alerts.sort(key=lambda a: (0 if a['severity'] == 'Critico' else 1, a['product'].name))
+
     total_inventory_value = sum([p.quantity * p.unit_cost for p in all_products])
     
     if current_user.role == 'owner':
@@ -178,7 +202,8 @@ def dashboard():
                            total_value=round(total_inventory_value, 2),
                            budget=budget,
                            budget_percent=round(budget_percent, 1),
-                           stock_autonomy=stock_autonomy)
+                           stock_autonomy=stock_autonomy,
+                           smart_alerts=smart_alerts)
 
 @main.route('/inventory')
 @login_required
