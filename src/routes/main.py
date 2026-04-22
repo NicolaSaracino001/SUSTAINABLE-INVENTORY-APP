@@ -115,8 +115,22 @@ def dashboard():
     # Con 200+ prodotti un grafico a 200 barre sarebbe illeggibile e lento.
     chart_products = sorted(all_products, key=lambda p: p.quantity * p.unit_cost, reverse=True)[:25]
     chart_labels = [p.name for p in chart_products]
-    chart_values = [p.quantity for p in chart_products]
-    chart_thresholds = [p.min_threshold for p in chart_products]
+    chart_values = [round(p.quantity, 4) for p in chart_products]
+
+    # Consumi ultimi 30 giorni per gli stessi prodotti (diverging bar chart)
+    from collections import defaultdict
+    cutoff_30d = datetime.utcnow() - timedelta(days=30)
+    product_ids = [p.id for p in chart_products]
+    recent_logs = ConsumptionLog.query.filter(
+        ConsumptionLog.user_id == rest_id,
+        ConsumptionLog.product_id.in_(product_ids),
+        ConsumptionLog.timestamp >= cutoff_30d
+    ).all()
+    consumption_map = defaultdict(float)
+    for log in recent_logs:
+        consumption_map[log.product_id] += log.quantity_used
+    # Valori negativi: fanno puntare le barre verso il basso nel diverging chart
+    chart_consumption = [-round(consumption_map.get(p.id, 0), 4) for p in chart_products]
     
     total_inventory_value = sum([p.quantity * p.unit_cost for p in all_products])
     
@@ -139,13 +153,13 @@ def dashboard():
     else:
         insight = f"Modello Attivo ({total_logs} data points). I trend si stanno stabilizzando."
 
-    return render_template('dashboard.html', 
-                           name=current_user.get_restaurant_name, 
+    return render_template('dashboard.html',
+                           name=current_user.get_restaurant_name,
                            low_stock=low_stock_products,
                            weather_suggestion=insight,
                            chart_labels=chart_labels,
                            chart_values=chart_values,
-                           chart_thresholds=chart_thresholds,
+                           chart_consumption=chart_consumption,
                            total_value=round(total_inventory_value, 2),
                            budget=budget,
                            budget_percent=round(budget_percent, 1))

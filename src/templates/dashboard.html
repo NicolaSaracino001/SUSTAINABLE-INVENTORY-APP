@@ -97,31 +97,57 @@
                     labels: {{ chart_labels | tojson | safe }},
                     datasets: [
                         {
-                            label: 'Giacenza',
+                            label: 'Giacenza attuale',
                             data: {{ chart_values | tojson | safe }},
-                            backgroundColor: 'rgba(16, 185, 129, 0.75)',
-                            borderRadius: 6,
+                            backgroundColor: '#0F5C4B',
+                            borderRadius: 4,
                             borderSkipped: false,
+                            stack: 'stock',
                         },
                         {
-                            label: 'Soglia Min',
-                            data: {{ chart_thresholds | tojson | safe }},
-                            type: 'line',
-                            borderColor: '#ef4444',
-                            borderWidth: 2,
-                            borderDash: [6, 4],
-                            pointRadius: 0,
-                            fill: false,
+                            label: 'Consumi (30gg)',
+                            data: {{ chart_consumption | tojson | safe }},
+                            backgroundColor: '#00D084',
+                            borderRadius: 4,
+                            borderSkipped: false,
+                            stack: 'stock',
                         }
                     ]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: { color: '#64748b', font: { family: 'Inter', size: 12 } }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.dataset.label || '';
+                                    const value = Math.abs(context.parsed.y);
+                                    return `${label}: ${value}`;
+                                }
+                            }
+                        }
+                    },
                     scales: {
-                        y: { beginAtZero: true, grid: { color: 'rgba(226,232,240,0.6)' }, ticks: { color: '#94a3b8', font: { family: 'Inter', size: 12 } } },
-                        x: { grid: { display: false }, ticks: { color: '#64748b', font: { family: 'Inter', size: 12 } } }
+                        x: {
+                            stacked: true,
+                            grid: { display: false },
+                            ticks: { color: '#64748b', font: { family: 'Inter', size: 12 } }
+                        },
+                        y: {
+                            stacked: true,
+                            grid: { color: 'rgba(226,232,240,0.6)' },
+                            ticks: {
+                                color: '#94a3b8',
+                                font: { family: 'Inter', size: 12 },
+                                callback: function(value) { return Math.abs(value); }
+                            }
+                        }
                     }
                 }
             });
