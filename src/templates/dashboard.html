@@ -88,20 +88,6 @@
     </div>
 
     <script>
-        // Riferimento globale all'istanza Chart.js — necessario per distruggerla
-        // prima che Turbo metta in cache la pagina (evita "Canvas is already in use").
-        let _inventoryChart = null;
-
-        // Distrugge il grafico PRIMA che Turbo salvi il DOM in cache.
-        // Senza questo, al ritorno sulla pagina il canvas risulta già occupato
-        // e Chart.js non riesce a reinizializzarsi.
-        document.addEventListener('turbo:before-cache', function () {
-            if (_inventoryChart) {
-                _inventoryChart.destroy();
-                _inventoryChart = null;
-            }
-        });
-
         // turbo:load scatta sia al primo caricamento che ad ogni navigazione Turbo.
         // Sostituisce DOMContentLoaded, che non scatta durante le navigazioni SPA.
         document.addEventListener('turbo:load', function () {
@@ -110,11 +96,12 @@
             const canvas = document.getElementById('inventoryChart');
             if (!canvas) return;
 
-            // Sicurezza aggiuntiva: distrugge un'eventuale istanza rimasta
-            if (_inventoryChart) {
-                _inventoryChart.destroy();
-                _inventoryChart = null;
-            }
+            // Chart.getChart() è l'API nativa di Chart.js v3+ per recuperare
+            // l'istanza associata a un canvas. Se esiste, la distruggiamo prima
+            // di crearne una nuova — evita l'errore "Canvas is already in use"
+            // quando Turbo riusa il DOM senza ricaricare la pagina.
+            const existingChart = Chart.getChart('inventoryChart');
+            if (existingChart) { existingChart.destroy(); }
 
             // Debug: verifica i dati raw provenienti dal backend
             console.log("Labels ricevute:",  {{ chart_labels      | tojson | safe }});
@@ -122,7 +109,7 @@
             console.log("Consumi ricevuti:", {{ chart_consumption | tojson | safe }});
 
             const ctx = canvas.getContext('2d');
-            _inventoryChart = new Chart(ctx, {
+            new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: {{ chart_labels | tojson | safe }},
