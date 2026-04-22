@@ -1,6 +1,9 @@
 <div class="sidebar">
     <div class="logo-container" id="sidebar-logo" data-turbo-permanent>
-        <img src="{{ url_for('static', filename='logo.png') }}?v=2" alt="FoodLoop" class="logo-img">
+        <!-- width/height espliciti prevengono il CLS (Cumulative Layout Shift):
+             il browser riserva lo spazio prima che l'immagine sia scaricata. -->
+        <img src="{{ url_for('static', filename='logo.png') }}?v=3"
+             alt="FoodLoop" class="logo-img" width="40" height="40">
         <span class="brand-name">FoodLoop</span>
     </div>
 
