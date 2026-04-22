@@ -129,8 +129,12 @@ def dashboard():
     consumption_map = defaultdict(float)
     for log in recent_logs:
         consumption_map[log.product_id] += log.quantity_used
-    # Valori negativi: fanno puntare le barre verso il basso nel diverging chart
-    chart_consumption = [-round(consumption_map.get(p.id, 0), 4) for p in chart_products]
+    # Valori negativi per i consumi; 0 esplicito (non -0.0) se nessun dato disponibile.
+    # Garantisce che len(chart_consumption) == len(chart_labels) == len(chart_values).
+    chart_consumption = []
+    for p in chart_products:
+        consumed = consumption_map.get(p.id, 0)
+        chart_consumption.append(-round(consumed, 4) if consumed > 0 else 0)
     
     total_inventory_value = sum([p.quantity * p.unit_cost for p in all_products])
     
