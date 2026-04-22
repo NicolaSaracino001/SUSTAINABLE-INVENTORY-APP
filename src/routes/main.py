@@ -117,24 +117,35 @@ def dashboard():
     chart_labels = [p.name for p in chart_products]
     chart_values = [round(p.quantity, 4) for p in chart_products]
 
-    # Consumi ultimi 30 giorni per gli stessi prodotti (diverging bar chart)
+    # Consumi ultimi 30 giorni — query unica su tutti i prodotti del ristorante.
+    # Usata sia per il diverging bar chart (chart_products) sia per l'autonomia predittiva.
     from collections import defaultdict
     cutoff_30d = datetime.utcnow() - timedelta(days=30)
-    product_ids = [p.id for p in chart_products]
-    recent_logs = ConsumptionLog.query.filter(
+    all_recent_logs = ConsumptionLog.query.filter(
         ConsumptionLog.user_id == rest_id,
-        ConsumptionLog.product_id.in_(product_ids),
         ConsumptionLog.timestamp >= cutoff_30d
     ).all()
-    consumption_map = defaultdict(float)
-    for log in recent_logs:
-        consumption_map[log.product_id] += log.quantity_used
-    # Valori negativi per i consumi; 0 esplicito (non -0.0) se nessun dato disponibile.
+    all_consumption_map = defaultdict(float)
+    for log in all_recent_logs:
+        all_consumption_map[log.product_id] += log.quantity_used
+
+    # Valori negativi per i consumi del grafico; 0 esplicito se nessun dato.
     # Garantisce che len(chart_consumption) == len(chart_labels) == len(chart_values).
     chart_consumption = []
     for p in chart_products:
-        consumed = consumption_map.get(p.id, 0)
+        consumed = all_consumption_map.get(p.id, 0)
         chart_consumption.append(-round(consumed, 4) if consumed > 0 else 0)
+
+    # Autonomia predittiva: giorni stimati prima dell'esaurimento scorte.
+    # avg_daily = consumo totale 30gg / 30; se zero → 'In elaborazione'.
+    stock_autonomy = {}
+    for p in all_products:
+        total_consumed = all_consumption_map.get(p.id, 0)
+        avg_daily = total_consumed / 30.0
+        if avg_daily == 0:
+            stock_autonomy[p.id] = 'In elaborazione'
+        else:
+            stock_autonomy[p.id] = round(p.quantity / avg_daily)
     
     total_inventory_value = sum([p.quantity * p.unit_cost for p in all_products])
     
@@ -166,7 +177,8 @@ def dashboard():
                            chart_consumption=chart_consumption,
                            total_value=round(total_inventory_value, 2),
                            budget=budget,
-                           budget_percent=round(budget_percent, 1))
+                           budget_percent=round(budget_percent, 1),
+                           stock_autonomy=stock_autonomy)
 
 @main.route('/inventory')
 @login_required

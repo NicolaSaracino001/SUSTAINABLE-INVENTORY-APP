@@ -74,7 +74,17 @@
                             <div class="alert-icon"><i data-lucide="alert-triangle"></i></div>
                             <span class="text-bold td-name" title="{{ p.name }}" style="font-size: 14px; max-width: 160px;">{{ p.name }}</span>
                         </div>
-                        <span class="badge badge-danger">{{ p.quantity }} {{ p.unit }}</span>
+                        <div class="flex items-center gap-8">
+                            {% set days = stock_autonomy.get(p.id) %}
+                            {% if days == 'In elaborazione' %}
+                            <span class="badge" style="background:#f1f5f9;color:#64748b;font-weight:500;">In elaborazione</span>
+                            {% elif days is not none and days <= 3 %}
+                            <span class="badge" style="background:#fef2f2;color:#ef4444;font-weight:600;">Scorte per: {{ days }}g</span>
+                            {% elif days is not none %}
+                            <span class="badge" style="background:#f0fdf4;color:#16a34a;font-weight:500;">Scorte per: {{ days }}g</span>
+                            {% endif %}
+                            <span class="badge badge-danger">{{ p.quantity }} {{ p.unit }}</span>
+                        </div>
                     </li>
                     {% else %}
                     <li class="alert-item" style="justify-content: center; padding: 32px 0; flex-direction: column; gap: 10px;">
@@ -166,25 +176,28 @@
             });
         }
 
-        // ── Strategia di invocazione doppia ──────────────────────────────────
+        // ── Strategia di invocazione robusta (cold start + Turbo) ────────────
         //
-        // 1. Chiamata diretta: copre il primo caricamento completo della pagina
-        //    (es. dopo login/redirect) e la ri-esecuzione del body script nelle
-        //    navigazioni Turbo (Turbo rivaluta gli script del <body> ad ogni visita).
+        // turbo:load: copre tutte le navigazioni successive gestite da Turbo Drive.
+        //   Il flag evita di accumulare listener duplicati ad ogni ri-esecuzione
+        //   del body script (Turbo rivaluta gli <script> del <body> ad ogni visita).
         //
-        // 2. turbo:load listener: safety net per casi in cui Turbo gestisce la
-        //    transizione prima che lo script venga ri-eseguito.
-        //    Il flag window._stockChartListenerAdded evita di accumulare listener
-        //    duplicati ad ogni ri-esecuzione del body script.
+        // DOMContentLoaded / chiamata diretta: copre il primo caricamento standard
+        //   (es. dopo login/redirect). Se il DOM è ancora in costruzione si aggancia
+        //   a DOMContentLoaded; altrimenti chiama direttamente la funzione.
         //
-        // Chart.getChart()?.destroy() all'inizio di renderStockChart() rende
-        // sicura qualsiasi doppia chiamata senza lasciare istanze orfane.
-
-        renderStockChart();
+        // Chart.getChart()?.destroy() all'interno di renderStockChart() rende
+        //   sicura qualsiasi doppia chiamata senza lasciare istanze orfane.
 
         if (!window._stockChartListenerAdded) {
             document.addEventListener('turbo:load', renderStockChart);
             window._stockChartListenerAdded = true;
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', renderStockChart);
+        } else {
+            renderStockChart();
         }
     </script>
 </body>
