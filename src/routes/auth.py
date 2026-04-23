@@ -107,7 +107,6 @@ def forgot_password():
         email = request.form.get('email', '').strip().lower()
         user  = User.query.filter_by(email=email).first()
 
-        # Risposta identica sia che l'email esista o meno (anti-enumeration)
         if user:
             # Invalida token precedenti ancora attivi per questo utente
             PasswordResetToken.query.filter_by(user_id=user.id, used=False).update({'used': True})
@@ -119,17 +118,19 @@ def forgot_password():
 
             reset_url = url_for('auth.reset_password', token=reset_token.token, _external=True)
 
-            # ── Fase 45.2: simulazione invio email — stampa il link nei log ──
+            # Log per i server logs
             logger.info('━' * 58)
             logger.info('  RESET PASSWORD — link di test (non invio email reale)')
             logger.info(f'  Utente  : {email}')
             logger.info(f'  Link    : {reset_url}')
             logger.info(f'  Scade   : {reset_token.expires_at.strftime("%Y-%m-%d %H:%M:%S")} UTC')
             logger.info('━' * 58)
-        else:
-            logger.warning(f'RESET RICHIESTO — email non trovata: {email}')
 
-        # Messaggio generico per non rivelare se l'email è registrata
+            # ── DEV MODE: mostra il link direttamente in pagina ──────────────
+            return render_template('forgot_password.html', dev_reset_url=reset_url)
+
+        # Email non trovata — risposta generica (anti-enumeration)
+        logger.warning(f'RESET RICHIESTO — email non trovata: {email}')
         flash("Se questa email è registrata, riceverai le istruzioni per il reset. Controlla anche la cartella spam.")
         return redirect(url_for('auth.forgot_password'))
 
