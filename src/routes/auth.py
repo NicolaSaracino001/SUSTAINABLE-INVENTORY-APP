@@ -1,6 +1,8 @@
 import logging
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required, current_user
+from markupsafe import Markup
+from werkzeug.security import check_password_hash
 from src.models.models import User, PasswordResetToken, db
 
 auth = Blueprint('auth', __name__)
@@ -126,8 +128,13 @@ def forgot_password():
             logger.info(f'  Scade   : {reset_token.expires_at.strftime("%Y-%m-%d %H:%M:%S")} UTC')
             logger.info('━' * 58)
 
-            # ── DEV MODE: mostra il link direttamente in pagina ──────────────
-            return render_template('forgot_password.html', dev_reset_url=reset_url)
+            # ── DEV MODE: flash con link HTML cliccabile ──────────────────────
+            flash(Markup(
+                f'ℹ️ <strong>Modalità Test</strong> — Link di reset generato:<br>'
+                f'<a href="{reset_url}" style="color:#1d4ed8;word-break:break-all;">'
+                f'{reset_url}</a>'
+            ))
+            return redirect(url_for('auth.forgot_password'))
 
         # Email non trovata — risposta generica (anti-enumeration)
         logger.warning(f'RESET RICHIESTO — email non trovata: {email}')
@@ -176,28 +183,31 @@ def update_password():
     new_pw      = request.form.get('new_password', '')
     confirm_pw  = request.form.get('confirm_password', '')
 
+    # Rileggo l'utente fresco dal DB — evita qualsiasi cache del proxy Flask-Login
+    user = db.session.get(User, current_user.id)
+
     # 1. La password attuale deve essere corretta
-    if not current_user.check_password(current_pw):
-        flash("La password attuale non è corretta.")
+    if not check_password_hash(user.password_hash, current_pw):
+        flash("❌ La password attuale non è corretta.")
         return redirect(url_for('main.profile') + '#sicurezza')
 
-    # 2. Policy anti-riciclo: la nuova non può essere uguale all'attuale
-    if current_user.check_password(new_pw):
-        flash("La nuova password non può essere uguale a quella attuale per motivi di sicurezza.")
+    # 2. Policy anti-riciclo — confronto esplicito hash vs input
+    if check_password_hash(user.password_hash, new_pw):
+        flash("❌ Errore: La nuova password non può essere uguale a quella attuale.")
         return redirect(url_for('main.profile') + '#sicurezza')
 
     # 3. La nuova e la conferma devono coincidere
     if new_pw != confirm_pw:
-        flash("La nuova password e la conferma non coincidono.")
+        flash("❌ La nuova password e la conferma non coincidono.")
         return redirect(url_for('main.profile') + '#sicurezza')
 
     # 4. Lunghezza minima
     if len(new_pw) < 6:
-        flash("La nuova password deve contenere almeno 6 caratteri.")
+        flash("❌ La nuova password deve contenere almeno 6 caratteri.")
         return redirect(url_for('main.profile') + '#sicurezza')
 
-    current_user.set_password(new_pw)
+    user.set_password(new_pw)
     db.session.commit()
-    logger.info(f'PASSWORD AGGIORNATA IN-APP — utente: {current_user.email}')
+    logger.info(f'PASSWORD AGGIORNATA IN-APP — utente: {user.email}')
     flash("✅ Password aggiornata con successo!")
     return redirect(url_for('main.profile') + '#sicurezza')
