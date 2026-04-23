@@ -1,7 +1,7 @@
 import logging
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required, current_user
-from src.models.models import User, db
+from src.models.models import User, PasswordResetToken, db
 
 auth = Blueprint('auth', __name__)
 logger = logging.getLogger('foodloop.auth')
@@ -96,3 +96,70 @@ def change_password():
             return redirect(url_for('main.dashboard'))
 
     return render_template('change_password.html')
+
+
+# ─── FASE 45: RECUPERO PASSWORD ───────────────────────────────────────────────
+
+@auth.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    """Mostra il form per richiedere il reset della password e genera il token."""
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        user  = User.query.filter_by(email=email).first()
+
+        # Risposta identica sia che l'email esista o meno (anti-enumeration)
+        if user:
+            # Invalida token precedenti ancora attivi per questo utente
+            PasswordResetToken.query.filter_by(user_id=user.id, used=False).update({'used': True})
+            db.session.flush()
+
+            reset_token = PasswordResetToken.generate(user.id)
+            db.session.add(reset_token)
+            db.session.commit()
+
+            reset_url = url_for('auth.reset_password', token=reset_token.token, _external=True)
+
+            # ── Fase 45.2: simulazione invio email — stampa il link nei log ──
+            logger.info('━' * 58)
+            logger.info('  RESET PASSWORD — link di test (non invio email reale)')
+            logger.info(f'  Utente  : {email}')
+            logger.info(f'  Link    : {reset_url}')
+            logger.info(f'  Scade   : {reset_token.expires_at.strftime("%Y-%m-%d %H:%M:%S")} UTC')
+            logger.info('━' * 58)
+        else:
+            logger.warning(f'RESET RICHIESTO — email non trovata: {email}')
+
+        # Messaggio generico per non rivelare se l'email è registrata
+        flash("Se questa email è registrata, riceverai le istruzioni per il reset. Controlla anche la cartella spam.")
+        return redirect(url_for('auth.forgot_password'))
+
+    return render_template('forgot_password.html')
+
+
+@auth.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token: str):
+    """Verifica il token e permette di impostare una nuova password."""
+    record = PasswordResetToken.query.filter_by(token=token).first()
+
+    if not record or not record.is_valid:
+        logger.warning(f'RESET PASSWORD — token non valido o scaduto: {token[:16]}...')
+        flash("Il link di reset non è valido o è scaduto. Richiedine uno nuovo.")
+        return redirect(url_for('auth.forgot_password'))
+
+    if request.method == 'POST':
+        new_password     = request.form.get('new_password', '')
+        confirm_password = request.form.get('confirm_password', '')
+
+        if len(new_password) < 6:
+            flash("La password deve contenere almeno 6 caratteri.")
+        elif new_password != confirm_password:
+            flash("Le password non coincidono. Riprova.")
+        else:
+            record.user.set_password(new_password)
+            record.used = True          # invalida il token dopo l'uso
+            db.session.commit()
+            logger.info(f'RESET PASSWORD OK — utente: {record.user.email}')
+            flash("Password aggiornata con successo! Puoi accedere con la nuova password.")
+            return redirect(url_for('auth.login'))
+
+    return render_template('reset_password.html', token=token)

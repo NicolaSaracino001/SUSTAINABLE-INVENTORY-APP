@@ -1,7 +1,8 @@
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
+from datetime import datetime, timedelta
+import secrets
 
 db = SQLAlchemy()
 
@@ -90,6 +91,31 @@ class SaleLog(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     total_items = db.Column(db.Integer, nullable=False, default=0)  # numero totale di porzioni
     source = db.Column(db.String(50), nullable=False, default='manual')  # 'receipt_scan' | 'manual'
+
+
+class PasswordResetToken(db.Model):
+    """Token sicuro per il reset della password — scade dopo 1 ora."""
+    __tablename__ = 'password_reset_token'
+    id         = db.Column(db.Integer, primary_key=True)
+    user_id    = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    token      = db.Column(db.String(128), unique=True, nullable=False, index=True)
+    expires_at = db.Column(db.DateTime, nullable=False)
+    used       = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('reset_tokens', lazy='dynamic'))
+
+    @staticmethod
+    def generate(user_id: int) -> 'PasswordResetToken':
+        """Crea un nuovo token sicuro da 64 byte hex, scadenza 1 ora."""
+        token = secrets.token_hex(64)
+        expires = datetime.utcnow() + timedelta(hours=1)
+        return PasswordResetToken(user_id=user_id, token=token, expires_at=expires)
+
+    @property
+    def is_valid(self) -> bool:
+        """True se il token non è stato usato e non è scaduto."""
+        return not self.used and datetime.utcnow() < self.expires_at
 
 
 class WasteLog(db.Model):
