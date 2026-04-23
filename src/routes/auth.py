@@ -163,3 +163,40 @@ def reset_password(token: str):
             return redirect(url_for('auth.login'))
 
     return render_template('reset_password.html', token=token)
+
+
+# ─── FASE 45.3: CAMBIO PASSWORD IN-APP ───────────────────────────────────────
+
+@auth.route('/update-password', methods=['POST'])
+@login_required
+def update_password():
+    """Permette all'utente loggato di cambiare la propria password dall'area Account."""
+    current_pw  = request.form.get('current_password', '')
+    new_pw      = request.form.get('new_password', '')
+    confirm_pw  = request.form.get('confirm_password', '')
+
+    # 1. La password attuale deve essere corretta
+    if not current_user.check_password(current_pw):
+        flash("La password attuale non è corretta.")
+        return redirect(url_for('main.profile') + '#sicurezza')
+
+    # 2. Policy anti-riciclo: la nuova non può essere uguale all'attuale
+    if current_user.check_password(new_pw):
+        flash("La nuova password non può essere uguale a quella attuale per motivi di sicurezza.")
+        return redirect(url_for('main.profile') + '#sicurezza')
+
+    # 3. La nuova e la conferma devono coincidere
+    if new_pw != confirm_pw:
+        flash("La nuova password e la conferma non coincidono.")
+        return redirect(url_for('main.profile') + '#sicurezza')
+
+    # 4. Lunghezza minima
+    if len(new_pw) < 6:
+        flash("La nuova password deve contenere almeno 6 caratteri.")
+        return redirect(url_for('main.profile') + '#sicurezza')
+
+    current_user.set_password(new_pw)
+    db.session.commit()
+    logger.info(f'PASSWORD AGGIORNATA IN-APP — utente: {current_user.email}')
+    flash("✅ Password aggiornata con successo!")
+    return redirect(url_for('main.profile') + '#sicurezza')
