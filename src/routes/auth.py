@@ -1,9 +1,9 @@
 import logging
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required, current_user
-from markupsafe import Markup
 from werkzeug.security import check_password_hash
 from src.models.models import User, PasswordResetToken, db
+from src.utils.mailer import send_reset_email
 
 auth = Blueprint('auth', __name__)
 logger = logging.getLogger('foodloop.auth')
@@ -120,25 +120,24 @@ def forgot_password():
 
             reset_url = url_for('auth.reset_password', token=reset_token.token, _external=True)
 
-            # Log per i server logs
-            logger.info('━' * 58)
-            logger.info('  RESET PASSWORD — link di test (non invio email reale)')
-            logger.info(f'  Utente  : {email}')
-            logger.info(f'  Link    : {reset_url}')
-            logger.info(f'  Scade   : {reset_token.expires_at.strftime("%Y-%m-%d %H:%M:%S")} UTC')
-            logger.info('━' * 58)
+            logger.info(f'RESET PASSWORD — token generato per: {email} | scade: {reset_token.expires_at.strftime("%Y-%m-%d %H:%M:%S")} UTC')
 
-            # ── DEV MODE: flash con link HTML cliccabile ──────────────────────
-            flash(Markup(
-                f'ℹ️ <strong>Modalità Test</strong> — Link di reset generato:<br>'
-                f'<a href="{reset_url}" style="color:#1d4ed8;word-break:break-all;">'
-                f'{reset_url}</a>'
-            ))
-            return redirect(url_for('auth.forgot_password'))
+            # ── Invio email reale via SMTP ────────────────────────────────────
+            sent = send_reset_email(
+                to_email  = user.email,
+                reset_url = reset_url,
+                user_name = user.full_name,
+            )
+            if not sent:
+                # SMTP non configurato o errore: logga il link per sviluppo locale
+                logger.warning(f'RESET PASSWORD — email non inviata. Link di fallback: {reset_url}')
 
-        # Email non trovata — risposta generica (anti-enumeration)
-        logger.warning(f'RESET RICHIESTO — email non trovata: {email}')
-        flash("Se questa email è registrata, riceverai le istruzioni per il reset. Controlla anche la cartella spam.")
+        else:
+            # Email non trovata — nessun log che rivela l'esistenza dell'account
+            logger.info('RESET PASSWORD — email non trovata nel sistema (risposta generica)')
+
+        # Risposta identica in ogni caso (anti-enumeration)
+        flash("Se l'email è registrata, riceverai a breve il link per reimpostare la password.")
         return redirect(url_for('auth.forgot_password'))
 
     return render_template('forgot_password.html')
@@ -162,6 +161,9 @@ def reset_password(token: str):
             flash("La password deve contenere almeno 6 caratteri.")
         elif new_password != confirm_password:
             flash("Le password non coincidono. Riprova.")
+        elif check_password_hash(record.user.password_hash, new_password):
+            # Policy anti-riciclo: blocca se la nuova è uguale all'attuale
+            flash("La nuova password non può essere uguale a quella precedente.")
         else:
             record.user.set_password(new_password)
             record.used = True          # invalida il token dopo l'uso
@@ -188,26 +190,26 @@ def update_password():
 
     # 1. La password attuale deve essere corretta
     if not check_password_hash(user.password_hash, current_pw):
-        flash("❌ La password attuale non è corretta.")
+        flash("La password attuale non è corretta.", 'pw_error')
         return redirect(url_for('main.profile') + '#sicurezza')
 
     # 2. Policy anti-riciclo — confronto esplicito hash vs input
     if check_password_hash(user.password_hash, new_pw):
-        flash("❌ Errore: La nuova password non può essere uguale a quella attuale.")
+        flash("Errore: La nuova password non può essere uguale a quella attuale.", 'pw_error')
         return redirect(url_for('main.profile') + '#sicurezza')
 
     # 3. La nuova e la conferma devono coincidere
     if new_pw != confirm_pw:
-        flash("❌ La nuova password e la conferma non coincidono.")
+        flash("La nuova password e la conferma non coincidono.", 'pw_error')
         return redirect(url_for('main.profile') + '#sicurezza')
 
     # 4. Lunghezza minima
     if len(new_pw) < 6:
-        flash("❌ La nuova password deve contenere almeno 6 caratteri.")
+        flash("La nuova password deve contenere almeno 6 caratteri.", 'pw_error')
         return redirect(url_for('main.profile') + '#sicurezza')
 
     user.set_password(new_pw)
     db.session.commit()
     logger.info(f'PASSWORD AGGIORNATA IN-APP — utente: {user.email}')
-    flash("✅ Password aggiornata con successo!")
+    flash("✅ Password aggiornata con successo!", 'pw_success')
     return redirect(url_for('main.profile') + '#sicurezza')

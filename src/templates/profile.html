@@ -73,7 +73,25 @@
             {% include 'components/user_pill.html' %}
         </div>
 
-        {% include 'components/flash_messages.html' %}
+        {# ── Flash globali: tutto tranne pw_error e pw_success ── #}
+        {% set all_msgs = get_flashed_messages(with_categories=True) %}
+        {% set global_msgs = all_msgs | selectattr('0', 'ne', 'pw_error') | selectattr('0', 'ne', 'pw_success') | list %}
+        {% set pw_msgs     = all_msgs | selectattr('0', 'in', ['pw_error', 'pw_success']) | list %}
+        {% if global_msgs %}
+        <div class="flash-messages">
+            {% for cat, m in global_msgs %}
+                {% if '❌' in m or 'Errore' in m or 'negato' in m %}
+                    <div class="flash-msg flash-error"><i data-lucide="x-circle"></i> {{ m }}</div>
+                {% elif '⚠️' in m %}
+                    <div class="flash-msg flash-warning"><i data-lucide="alert-triangle"></i> {{ m }}</div>
+                {% elif 'ℹ️' in m or '⏳' in m %}
+                    <div class="flash-msg flash-info"><i data-lucide="info"></i> {{ m }}</div>
+                {% else %}
+                    <div class="flash-msg flash-success"><i data-lucide="check-circle-2"></i> {{ m }}</div>
+                {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
 
         <div class="grid-2">
             <!-- Colonna sx -->
@@ -192,6 +210,24 @@
                         </div>
                         <h3>Sicurezza</h3>
                     </div>
+
+                    {# ── Messaggi specifici del form password ── #}
+                    {% if pw_msgs %}
+                        {% for cat, m in pw_msgs %}
+                        <div style="display:flex;align-items:flex-start;gap:10px;
+                                    padding:11px 14px;border-radius:8px;margin-bottom:14px;
+                                    {% if cat == 'pw_error' %}
+                                    background:rgba(239,68,68,0.09);border:1.5px solid rgba(239,68,68,0.35);color:#b91c1c;
+                                    {% else %}
+                                    background:rgba(34,197,94,0.10);border:1.5px solid rgba(34,197,94,0.35);color:#15803d;
+                                    {% endif %}
+                                    font-size:13px;font-weight:500;line-height:1.5;">
+                            <i data-lucide="{% if cat == 'pw_error' %}alert-circle{% else %}check-circle{% endif %}"
+                               style="width:15px;height:15px;flex-shrink:0;margin-top:1px;"></i>
+                            <span>{{ m }}</span>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
 
                     <form action="{{ url_for('auth.update_password') }}" method="POST"
                           id="form-change-pw" novalidate>
