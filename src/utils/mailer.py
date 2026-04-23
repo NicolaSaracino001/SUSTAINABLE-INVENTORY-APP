@@ -20,9 +20,14 @@ logger = logging.getLogger('foodloop.mailer')
 
 
 def _smtp_config() -> dict:
+    try:
+        port = int(os.environ.get('SMTP_PORT', 587))
+    except (ValueError, TypeError):
+        logger.warning('MAILER — SMTP_PORT non valido, uso 587 come default')
+        port = 587
     return {
         'server':   os.environ.get('SMTP_SERVER', ''),
-        'port':     int(os.environ.get('SMTP_PORT', 587)),
+        'port':     port,
         'username': os.environ.get('SMTP_USERNAME', ''),
         'password': os.environ.get('SMTP_PASSWORD', ''),
         'sender':   os.environ.get('MAIL_DEFAULT_SENDER', ''),

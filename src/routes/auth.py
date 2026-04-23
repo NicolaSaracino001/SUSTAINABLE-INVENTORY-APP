@@ -136,9 +136,9 @@ def forgot_password():
             # Email non trovata — nessun log che rivela l'esistenza dell'account
             logger.info('RESET PASSWORD — email non trovata nel sistema (risposta generica)')
 
-        # Risposta identica in ogni caso (anti-enumeration)
+        # Risposta identica in ogni caso (anti-enumeration) → redirect al login
         flash("Se l'email è registrata, riceverai a breve il link per reimpostare la password.")
-        return redirect(url_for('auth.forgot_password'))
+        return redirect(url_for('auth.login'))
 
     return render_template('forgot_password.html')
 
