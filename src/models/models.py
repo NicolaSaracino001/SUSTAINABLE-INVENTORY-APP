@@ -127,3 +127,15 @@ class WasteLog(db.Model):
     cost_lost = db.Column(db.Float, nullable=False)
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     product = db.relationship('Product', lazy='joined')   # eager load: evita N+1
+
+
+class DailyGuests(db.Model):
+    """Previsione coperti per una data specifica — Calendario Prenotazioni."""
+    __tablename__ = 'daily_guests'
+    id           = db.Column(db.Integer, primary_key=True)
+    user_id      = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    target_date  = db.Column(db.Date, nullable=False)
+    guests_count = db.Column(db.Integer, nullable=False, default=0)
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'target_date', name='uq_daily_guests_user_date'),
+    )

@@ -23,6 +23,10 @@
            class="nav-item {% if sidebar_active == 'menu' %}active{% endif %}">
             <i data-lucide="book-open"></i> Menu Planner
         </a>
+        <a href="{{ url_for('main.calendar') }}"
+           class="nav-item {% if sidebar_active == 'calendar' %}active{% endif %}">
+            <i data-lucide="calendar-days"></i> Calendario Coperti
+        </a>
         <a href="{{ url_for('main.suppliers') }}"
            class="nav-item {% if sidebar_active == 'suppliers' %}active{% endif %}">
             <i data-lucide="shopping-cart"></i> Fornitori & Ordini

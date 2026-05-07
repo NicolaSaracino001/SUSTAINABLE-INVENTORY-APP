@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, send_from_directory, current_app, session, jsonify
 from flask_login import login_required, current_user
-from src.models.models import MenuItem, RecipeItem, Product, ConsumptionLog, User, Supplier, WasteLog, SaleLog, db
+from src.models.models import MenuItem, RecipeItem, Product, ConsumptionLog, User, Supplier, WasteLog, SaleLog, DailyGuests, db
 from datetime import datetime, timedelta
 from functools import wraps
 from werkzeug.utils import secure_filename
@@ -1654,5 +1654,114 @@ def clear_sale_scan():
             os.remove(result_path)
         except Exception:
             pass
+
+
+# ═══════════════════════════════════════════════════════
+#  FASE 46.1 — Calendario Previsioni Coperti
+# ═══════════════════════════════════════════════════════
+
+_MONTH_NAMES = [
+    'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+    'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
+]
+
+
+@main.route('/calendar')
+@login_required
+def calendar():
+    """Visualizza il calendario mensile delle previsioni coperti."""
+    from calendar import monthrange
+    from datetime import date
+
+    today = date.today()
+    month_str = request.args.get('month', '')
+    try:
+        year, month = map(int, month_str.split('-'))
+    except (ValueError, AttributeError):
+        year, month = today.year, today.month
+
+    # Limiti ragionevoli
+    year = max(2020, min(2035, year))
+    month = max(1, min(12, month))
+
+    # Prenotazioni del mese corrente
+    month_start = date(year, month, 1)
+    days_in_month = monthrange(year, month)[1]
+    month_end = date(year, month, days_in_month)
+
+    bookings = DailyGuests.query.filter(
+        DailyGuests.user_id == current_user.get_restaurant_id,
+        DailyGuests.target_date >= month_start,
+        DailyGuests.target_date <= month_end
+    ).all()
+    bookings_map = {b.target_date.day: b.guests_count for b in bookings}
+
+    # Griglia settimane: lista di liste (7 slot, None = padding)
+    first_weekday = monthrange(year, month)[0]  # 0 = lunedì
+    weeks, day = [], 1
+    while day <= days_in_month:
+        week = []
+        for wd in range(7):
+            if (len(weeks) == 0 and wd < first_weekday) or day > days_in_month:
+                week.append(None)
+            else:
+                week.append(day)
+                day += 1
+        weeks.append(week)
+
+    prev_year, prev_month = (year - 1, 12) if month == 1 else (year, month - 1)
+    next_year, next_month = (year + 1, 1)  if month == 12 else (year, month + 1)
+
+    return render_template('calendar.html',
+        year=year,
+        month=month,
+        month_name=_MONTH_NAMES[month - 1],
+        weeks=weeks,
+        today=today,
+        bookings_map=bookings_map,
+        days_in_month=days_in_month,
+        prev_month=f"{prev_year}-{prev_month:02d}",
+        next_month=f"{next_year}-{next_month:02d}",
+    )
+
+
+@main.route('/api/calendar/update', methods=['POST'])
+@login_required
+def calendar_update():
+    """Crea o aggiorna la previsione coperti per una data specifica."""
+    from datetime import date
+
+    target_date_str = request.form.get('target_date', '').strip()
+    guests_str      = request.form.get('guests_count', '').strip()
+    month_back      = request.form.get('month_back', '')
+
+    try:
+        target_date  = datetime.strptime(target_date_str, '%Y-%m-%d').date()
+        guests_count = int(guests_str)
+        if guests_count < 0:
+            raise ValueError
+    except (ValueError, TypeError):
+        flash("❌ Dati non validi. Controlla la data e il numero di coperti.")
+        return redirect(url_for('main.calendar', month=month_back or ''))
+
+    rid    = current_user.get_restaurant_id
+    record = DailyGuests.query.filter_by(user_id=rid, target_date=target_date).first()
+
+    if record:
+        if guests_count == 0:
+            db.session.delete(record)
+            flash(f"Previsione rimossa per il {target_date.strftime('%d/%m/%Y')}.")
+        else:
+            record.guests_count = guests_count
+            flash(f"Coperti aggiornati con successo per il {target_date.strftime('%d/%m/%Y')}.")
+    else:
+        if guests_count > 0:
+            db.session.add(DailyGuests(
+                user_id=rid, target_date=target_date, guests_count=guests_count
+            ))
+            flash(f"Coperti aggiornati con successo per il {target_date.strftime('%d/%m/%Y')}.")
+
+    db.session.commit()
+    return redirect(url_for('main.calendar', month=target_date.strftime('%Y-%m')))
     flash("Analisi scontrino annullata.")
     return redirect(url_for('main.sales_offload'))
