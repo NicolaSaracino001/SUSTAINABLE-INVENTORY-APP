@@ -82,12 +82,14 @@
                     </thead>
                     <tbody>
                         {% for p in products %}
-                        {% set need = estimated_needs.get(p.id) %}
+                        {% set need   = estimated_needs.get(p.id) %}
                         {% set source = need_sources.get(p.id) %}
+                        {% set dep    = depletion_dates.get(p.id) %}
+                        {% set days_left = (dep - today).days if dep else None %}
                         <tr>
                             <td class="text-bold td-name" title="{{ p.name }}">{{ p.name }}</td>
-                            <td>{{ p.quantity }} <span class="text-muted text-sm">{{ p.unit }}</span></td>
-                            <td class="text-muted">€ {{ p.unit_cost }}</td>
+                            <td>{{ p.quantity | round(2) }} <span class="text-muted text-sm">{{ p.unit }}</span></td>
+                            <td class="text-muted">€ {{ p.unit_cost | round(2) }}</td>
                             <td>
                                 {% if p.quantity == 0 %}
                                     <span class="badge badge-danger"><i data-lucide="x-circle"></i> Esaurito</span>
@@ -101,8 +103,8 @@
                                 {% if need is not none %}
                                     {# ── Stima disponibile (auto o manuale) ── #}
                                     <div style="font-size: 0.78rem; margin-bottom: 5px; line-height: 1.7;">
-                                        <span class="text-muted">Scorta:</span> <strong>{{ p.quantity }} {{ p.unit }}</strong><br>
-                                        <span class="text-muted">Stima:</span> <strong>{{ need }} {{ p.unit }}</strong>
+                                        <span class="text-muted">Scorta:</span> <strong>{{ p.quantity | round(2) }} {{ p.unit }}</strong><br>
+                                        <span class="text-muted">Stima:</span>  <strong>{{ need | round(2) }} {{ p.unit }}</strong>
                                     </div>
                                     {# Badge fonte della previsione #}
                                     {% if source == 'auto' %}
@@ -114,7 +116,7 @@
                                             <i data-lucide="hand"></i> Stima Manuale
                                         </span>
                                     {% endif %}
-                                    {# Badge sufficienza scorte #}
+                                    {# Badge sufficienza scorte 7gg #}
                                     {% if p.quantity >= need %}
                                         <span class="badge badge-success" style="font-size: 0.68rem;">
                                             <i data-lucide="check"></i> Sufficiente
@@ -122,7 +124,7 @@
                                     {% else %}
                                         <span class="badge badge-danger" style="font-size: 0.68rem;">
                                             <i data-lucide="alert-triangle"></i>
-                                            Mancano {{ (need - p.quantity) | round(3) }} {{ p.unit }}
+                                            Mancano {{ (need - p.quantity) | round(2) }} {{ p.unit }}
                                         </span>
                                     {% endif %}
                                 {% elif total_guests_7d == 0 %}
@@ -132,12 +134,24 @@
                                         Nessuno storico — usa override
                                     </span>
                                 {% endif %}
+                                {# ── Alert Simulatore di Svuotamento ── #}
+                                {% if dep and days_left is not none and days_left <= 7 %}
+                                    <div style="margin-top: 6px; padding: 5px 8px;
+                                                background: #fff1f2; border: 1px solid #fca5a5;
+                                                border-radius: 6px; font-size: 0.75rem; color: #991b1b;">
+                                        <strong>⚠️ Esaurimento previsto:</strong>
+                                        {{ dep.strftime('%d/%m') }}
+                                        {% if days_left == 1 %}(domani)
+                                        {% else %}(tra {{ days_left }} giorni)
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
                                 {# ── Override manuale (collassabile, per ingredienti nuovi) ── #}
                                 <details style="margin-top: 7px;">
                                     <summary style="font-size: 0.7rem; color: var(--text-3); cursor: pointer; user-select: none;">
                                         Override manuale
                                         {% if source == 'manual' %}
-                                            <span style="color: var(--text-2);">(attivo: {{ p.consumo_medio_per_coperto }} {{ p.unit }}/cop.)</span>
+                                            <span style="color: var(--text-2);">(attivo: {{ p.consumo_medio_per_coperto | round(3) }} {{ p.unit }}/cop.)</span>
                                         {% else %}
                                             <span style="color: var(--text-3);">— solo nuovi ingredienti</span>
                                         {% endif %}

@@ -207,41 +207,42 @@ def dashboard():
 
 def calculate_estimated_needs(rest_id):
     """
-    Calcola il fabbisogno stimato per i prossimi 7 giorni con algoritmo ibrido.
+    Calcola fabbisogno stimato (7gg) + data di esaurimento scorte per ogni prodotto.
 
-    FASE 1 — AUTO (Dati Storici):
-        Incrocia ConsumptionLog e DailyGuests degli ultimi 30 giorni.
-        avg_per_coperto = Σ quantità_consumata_30d / Σ coperti_registrati_30d
-        fabbisogno = avg_per_coperto × coperti_futuri_7d
+    ALGORITMO IBRIDO:
+      AUTO     — avg_coperto = Σ consumato_30d / Σ coperti_registrati_30d
+      FALLBACK — usa consumo_medio_per_coperto se non ci sono dati storici
 
-    FASE 2 — FALLBACK (Stima Manuale):
-        Se non ci sono dati storici sufficienti (ingrediente nuovo o nessun
-        coperto storico registrato), usa consumo_medio_per_coperto dal DB.
+    SIMULATORE DI SVUOTAMENTO:
+      Partendo dalla giacenza attuale, sottrae giorno per giorno
+      (avg_coperto × coperti_giornalieri_calendario) fino a zero.
+      Orizzonte massimo: 60 giorni.
 
     Returns:
-        tuple(dict, dict, int):
-          needs         : {product_id: fabbisogno_stimato}
-          sources       : {product_id: 'auto' | 'manual'}
-          total_guests_7d : coperti previsti nei prossimi 7 giorni
+        tuple(dict, dict, int, dict, date):
+          needs           : {product_id: fabbisogno_7d}         — 2 decimali
+          sources         : {product_id: 'auto' | 'manual'}
+          total_guests_7d : coperti previsti prossimi 7 giorni
+          depletion_dates : {product_id: date_esaurimento}      — entro 60gg
+          today           : date odierna (usata nel template per diff. giorni)
     """
     from datetime import date as _date
     from collections import defaultdict
 
     today = _date.today()
 
-    # ── Coperti futuri (prossimi 7 giorni, escluso oggi) ─────────────────────
-    upcoming = DailyGuests.query.filter(
+    # ── Coperti futuri (fino a 60 giorni) — una sola query ───────────────────
+    future_guests_rows = DailyGuests.query.filter(
         DailyGuests.user_id == rest_id,
         DailyGuests.target_date > today,
-        DailyGuests.target_date <= today + timedelta(days=7)
-    ).all()
-    total_guests_7d = sum(g.guests_count for g in upcoming)
+        DailyGuests.target_date <= today + timedelta(days=60)
+    ).order_by(DailyGuests.target_date).all()
 
-    needs = {}
-    sources = {}
-
-    if total_guests_7d == 0:
-        return needs, sources, 0
+    future_guests_map = {g.target_date: g.guests_count for g in future_guests_rows}
+    total_guests_7d = sum(
+        v for d, v in future_guests_map.items()
+        if d <= today + timedelta(days=7)
+    )
 
     # ── Coperti storici (ultimi 30 giorni) ───────────────────────────────────
     past_guests = DailyGuests.query.filter(
@@ -261,22 +262,45 @@ def calculate_estimated_needs(rest_id):
     for log in recent_logs:
         consumption_30d[log.product_id] += log.quantity_used
 
-    # ── Calcolo per prodotto ──────────────────────────────────────────────────
+    # ── avg_per_coperto per prodotto (base per needs E simulazione) ───────────
     products = Product.query.filter_by(user_id=rest_id).all()
+    avg_map = {}    # {product_id: avg_per_coperto}
+    sources = {}
+
     for p in products:
         consumed = consumption_30d.get(p.id, 0)
-
         if total_guests_30d > 0 and consumed > 0:
-            # AUTO: abbiamo storico consumi E storico coperti → calcolo preciso
-            avg = consumed / total_guests_30d
-            needs[p.id] = round(avg * total_guests_7d, 4)
+            avg_map[p.id] = consumed / total_guests_30d
             sources[p.id] = 'auto'
         elif p.consumo_medio_per_coperto and p.consumo_medio_per_coperto > 0:
-            # FALLBACK: nessun dato storico sufficiente → usa valore manuale
-            needs[p.id] = round(p.consumo_medio_per_coperto * total_guests_7d, 4)
+            avg_map[p.id] = p.consumo_medio_per_coperto
             sources[p.id] = 'manual'
 
-    return needs, sources, total_guests_7d
+    # ── Fabbisogno 7 giorni ──────────────────────────────────────────────────
+    needs = {}
+    if total_guests_7d > 0:
+        for pid, avg in avg_map.items():
+            n = round(avg * total_guests_7d, 2)
+            if n > 0:
+                needs[pid] = n
+
+    # ── Simulatore di svuotamento (orizzonte 60 giorni) ──────────────────────
+    depletion_dates = {}
+    for p in products:
+        avg = avg_map.get(p.id)
+        if not avg:
+            continue
+        stock = p.quantity
+        for i in range(1, 61):
+            day = today + timedelta(days=i)
+            guests_day = future_guests_map.get(day, 0)
+            if guests_day > 0:
+                stock = stock - avg * guests_day
+                if stock <= 0:
+                    depletion_dates[p.id] = day
+                    break
+
+    return needs, sources, total_guests_7d, depletion_dates, today
 
 
 @main.route('/inventory')
@@ -285,10 +309,12 @@ def inventory():
     rest_id = current_user.get_restaurant_id
     products = Product.query.filter_by(user_id=rest_id).all()
     suppliers = Supplier.query.filter_by(user_id=rest_id).all()
-    estimated_needs, need_sources, total_guests_7d = calculate_estimated_needs(rest_id)
+    estimated_needs, need_sources, total_guests_7d, depletion_dates, today = \
+        calculate_estimated_needs(rest_id)
     return render_template('inventory.html', products=products, suppliers=suppliers,
                            estimated_needs=estimated_needs, need_sources=need_sources,
-                           total_guests_7d=total_guests_7d)
+                           total_guests_7d=total_guests_7d,
+                           depletion_dates=depletion_dates, today=today)
 
 @main.route('/add_inventory_item', methods=['POST'])
 @login_required
