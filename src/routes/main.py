@@ -207,37 +207,76 @@ def dashboard():
 
 def calculate_estimated_needs(rest_id):
     """
-    Calcola il fabbisogno stimato per i prossimi 7 giorni incrociando
-    DailyGuests.guests_count con Product.consumo_medio_per_coperto.
+    Calcola il fabbisogno stimato per i prossimi 7 giorni con algoritmo ibrido.
 
-    Logica:
-        fabbisogno_prodotto = consumo_medio_per_coperto × Σ guests_count (prossimi 7gg)
+    FASE 1 — AUTO (Dati Storici):
+        Incrocia ConsumptionLog e DailyGuests degli ultimi 30 giorni.
+        avg_per_coperto = Σ quantità_consumata_30d / Σ coperti_registrati_30d
+        fabbisogno = avg_per_coperto × coperti_futuri_7d
+
+    FASE 2 — FALLBACK (Stima Manuale):
+        Se non ci sono dati storici sufficienti (ingrediente nuovo o nessun
+        coperto storico registrato), usa consumo_medio_per_coperto dal DB.
 
     Returns:
-        tuple(dict, int): ({product_id: fabbisogno_stimato}, total_guests)
+        tuple(dict, dict, int):
+          needs         : {product_id: fabbisogno_stimato}
+          sources       : {product_id: 'auto' | 'manual'}
+          total_guests_7d : coperti previsti nei prossimi 7 giorni
     """
     from datetime import date as _date
-    today = _date.today()
-    end_date = today + timedelta(days=7)
+    from collections import defaultdict
 
+    today = _date.today()
+
+    # ── Coperti futuri (prossimi 7 giorni, escluso oggi) ─────────────────────
     upcoming = DailyGuests.query.filter(
         DailyGuests.user_id == rest_id,
         DailyGuests.target_date > today,
-        DailyGuests.target_date <= end_date
+        DailyGuests.target_date <= today + timedelta(days=7)
     ).all()
-
-    total_guests = sum(g.guests_count for g in upcoming)
+    total_guests_7d = sum(g.guests_count for g in upcoming)
 
     needs = {}
-    if total_guests > 0:
-        products_with_consumo = Product.query.filter(
-            Product.user_id == rest_id,
-            Product.consumo_medio_per_coperto > 0
-        ).all()
-        for p in products_with_consumo:
-            needs[p.id] = round(p.consumo_medio_per_coperto * total_guests, 4)
+    sources = {}
 
-    return needs, total_guests
+    if total_guests_7d == 0:
+        return needs, sources, 0
+
+    # ── Coperti storici (ultimi 30 giorni) ───────────────────────────────────
+    past_guests = DailyGuests.query.filter(
+        DailyGuests.user_id == rest_id,
+        DailyGuests.target_date >= today - timedelta(days=30),
+        DailyGuests.target_date < today
+    ).all()
+    total_guests_30d = sum(g.guests_count for g in past_guests)
+
+    # ── Consumi storici (ultimi 30 giorni) ───────────────────────────────────
+    cutoff_30d = datetime.utcnow() - timedelta(days=30)
+    recent_logs = ConsumptionLog.query.filter(
+        ConsumptionLog.user_id == rest_id,
+        ConsumptionLog.timestamp >= cutoff_30d
+    ).all()
+    consumption_30d = defaultdict(float)
+    for log in recent_logs:
+        consumption_30d[log.product_id] += log.quantity_used
+
+    # ── Calcolo per prodotto ──────────────────────────────────────────────────
+    products = Product.query.filter_by(user_id=rest_id).all()
+    for p in products:
+        consumed = consumption_30d.get(p.id, 0)
+
+        if total_guests_30d > 0 and consumed > 0:
+            # AUTO: abbiamo storico consumi E storico coperti → calcolo preciso
+            avg = consumed / total_guests_30d
+            needs[p.id] = round(avg * total_guests_7d, 4)
+            sources[p.id] = 'auto'
+        elif p.consumo_medio_per_coperto and p.consumo_medio_per_coperto > 0:
+            # FALLBACK: nessun dato storico sufficiente → usa valore manuale
+            needs[p.id] = round(p.consumo_medio_per_coperto * total_guests_7d, 4)
+            sources[p.id] = 'manual'
+
+    return needs, sources, total_guests_7d
 
 
 @main.route('/inventory')
@@ -246,9 +285,10 @@ def inventory():
     rest_id = current_user.get_restaurant_id
     products = Product.query.filter_by(user_id=rest_id).all()
     suppliers = Supplier.query.filter_by(user_id=rest_id).all()
-    estimated_needs, total_guests_7d = calculate_estimated_needs(rest_id)
+    estimated_needs, need_sources, total_guests_7d = calculate_estimated_needs(rest_id)
     return render_template('inventory.html', products=products, suppliers=suppliers,
-                           estimated_needs=estimated_needs, total_guests_7d=total_guests_7d)
+                           estimated_needs=estimated_needs, need_sources=need_sources,
+                           total_guests_7d=total_guests_7d)
 
 @main.route('/add_inventory_item', methods=['POST'])
 @login_required
