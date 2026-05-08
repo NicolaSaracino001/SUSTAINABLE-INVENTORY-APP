@@ -1104,6 +1104,142 @@ body.auth-page::before { display: none; }
   .card          { padding: 14px; }
 }
 
+/* ============================================================
+   FASE 47.1 — Mobile-First: Card Tables, Touch Targets,
+               Calendar Responsive
+   ============================================================ */
+
+/* ── Task 1: Inventory table → card layout su mobile ─────── */
+@media (max-width: 768px) {
+
+  /* Blocca la struttura tabella → ogni tr diventa una card */
+  .inventory-table,
+  .inventory-table tbody,
+  .inventory-table tr,
+  .inventory-table td { display: block; }
+
+  .inventory-table thead { display: none; }
+
+  .inventory-table tbody tr {
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    margin-bottom: 10px;
+    padding: 12px 14px;
+    background: var(--surface);
+    box-shadow: var(--shadow-xs);
+  }
+  .inventory-table tbody tr:hover { background: var(--surface); }
+
+  /* Ogni cella: etichetta a sinistra, valore a destra */
+  .inventory-table td {
+    padding: 7px 0;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.40);
+    font-size: 13px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    vertical-align: top;
+  }
+  .inventory-table td:last-child { border-bottom: none; }
+
+  /* Etichetta generata dal data-label */
+  .inventory-table td[data-label]::before {
+    content: attr(data-label);
+    font-weight: 700;
+    font-size: 10px;
+    color: var(--text-4);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    flex-shrink: 0;
+    padding-top: 3px;
+    min-width: 72px;
+  }
+
+  /* Cella nome: intestazione card, full-width, nessuna etichetta */
+  .inventory-table td.td-name {
+    font-size: 15px;
+    font-weight: 700;
+    max-width: none;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: unset;
+    justify-content: flex-start;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 10px;
+    margin-bottom: 2px;
+  }
+  .inventory-table td.td-name::before { display: none; }
+
+  /* Cella fabbisogno: contenuto verticale, full-width */
+  .inventory-table td.td-fabbisogno {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .inventory-table td.td-fabbisogno::before { margin-bottom: 6px; }
+
+  /* Cella allinea: form occupa tutta la larghezza */
+  .inventory-table td.td-allinea .align-form { width: 100%; }
+  .inventory-table td.td-allinea .input-mini {
+    flex: 1;
+    width: auto !important;
+  }
+
+  /* ── Task 2: Touch target 44×44px (Apple HIG) ───────────── */
+  .btn-icon {
+    padding: 11px;
+    min-width: 44px;
+    min-height: 44px;
+    justify-content: center;
+  }
+  .btn-icon i { width: 18px; height: 18px; }
+
+  /* Input mini: altezza minima 44px per facilità di tap */
+  .input-mini {
+    padding: 10px 12px !important;
+    min-height: 44px;
+    font-size: 15px;
+  }
+
+  /* Form-row inputs: più alti e leggibili */
+  .form-row input,
+  .form-row select {
+    min-height: 48px;
+    font-size: 15px;
+  }
+
+  /* Card-header: badge a capo se necessario */
+  .card-header { flex-wrap: wrap; gap: 8px; }
+}
+
+/* ── Task 1: Calendario — scroll orizzontale + celle compatte ≤480px ── */
+@media (max-width: 480px) {
+  .cal-grid-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0 -4px;  /* compensa il padding card */
+    padding: 0 4px;
+  }
+  .cal-grid {
+    min-width: 280px;
+    border-spacing: 3px;
+  }
+  .cal-day {
+    min-width: 36px;
+    height: 56px;
+  }
+  .cal-day-num         { font-size: 11px; padding: 5px 0 1px; }
+  .cal-day-guests      { font-size: 14px; }
+  .cal-day-guests-label { font-size: 8px; }
+  .cal-day-empty       { margin-top: 4px; }
+  .cal-grid th         { font-size: 9px; padding-bottom: 5px; }
+
+  /* Edit panel: stack sotto il calendario */
+  .edit-panel { padding: 16px; }
+  .edit-actions { flex-direction: column; }
+  .edit-actions .btn { width: 100%; justify-content: center; }
+}
+
 /* === 22. UTILITIES === */
 .text-primary  { color: var(--primary) !important; }
 .text-muted    { color: var(--text-3) !important; }
