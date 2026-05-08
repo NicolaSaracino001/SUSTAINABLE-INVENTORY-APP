@@ -42,6 +42,7 @@ class Product(db.Model):
     unit = db.Column(db.String(50), nullable=False)
     min_threshold = db.Column(db.Float, nullable=False)
     unit_cost = db.Column(db.Float, default=0.0)
+    consumo_medio_per_coperto = db.Column(db.Float, default=0.0)  # quantità per coperto, stessa unità del prodotto
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False,
                         index=True)   # ← indice: query filter_by(user_id) veloce
     supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'), nullable=True)

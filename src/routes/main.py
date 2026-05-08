@@ -205,13 +205,50 @@ def dashboard():
                            stock_autonomy=stock_autonomy,
                            smart_alerts=smart_alerts)
 
+def calculate_estimated_needs(rest_id):
+    """
+    Calcola il fabbisogno stimato per i prossimi 7 giorni incrociando
+    DailyGuests.guests_count con Product.consumo_medio_per_coperto.
+
+    Logica:
+        fabbisogno_prodotto = consumo_medio_per_coperto × Σ guests_count (prossimi 7gg)
+
+    Returns:
+        tuple(dict, int): ({product_id: fabbisogno_stimato}, total_guests)
+    """
+    from datetime import date as _date
+    today = _date.today()
+    end_date = today + timedelta(days=7)
+
+    upcoming = DailyGuests.query.filter(
+        DailyGuests.user_id == rest_id,
+        DailyGuests.target_date > today,
+        DailyGuests.target_date <= end_date
+    ).all()
+
+    total_guests = sum(g.guests_count for g in upcoming)
+
+    needs = {}
+    if total_guests > 0:
+        products_with_consumo = Product.query.filter(
+            Product.user_id == rest_id,
+            Product.consumo_medio_per_coperto > 0
+        ).all()
+        for p in products_with_consumo:
+            needs[p.id] = round(p.consumo_medio_per_coperto * total_guests, 4)
+
+    return needs, total_guests
+
+
 @main.route('/inventory')
 @login_required
 def inventory():
     rest_id = current_user.get_restaurant_id
     products = Product.query.filter_by(user_id=rest_id).all()
     suppliers = Supplier.query.filter_by(user_id=rest_id).all()
-    return render_template('inventory.html', products=products, suppliers=suppliers)
+    estimated_needs, total_guests_7d = calculate_estimated_needs(rest_id)
+    return render_template('inventory.html', products=products, suppliers=suppliers,
+                           estimated_needs=estimated_needs, total_guests_7d=total_guests_7d)
 
 @main.route('/add_inventory_item', methods=['POST'])
 @login_required
@@ -223,16 +260,42 @@ def add_inventory_item():
     cost_str = request.form.get('unit_cost')
     unit_cost = float(cost_str) if cost_str else 0.0
     supplier_id = request.form.get('supplier_id')
-    
+    consumo_str = request.form.get('consumo_medio_per_coperto', '').strip()
+    consumo = float(consumo_str) if consumo_str else 0.0
+
     new_product = Product(
-        name=name, quantity=quantity, unit=unit, 
-        min_threshold=threshold, unit_cost=unit_cost, 
+        name=name, quantity=quantity, unit=unit,
+        min_threshold=threshold, unit_cost=unit_cost,
         user_id=current_user.get_restaurant_id,
-        supplier_id=supplier_id if supplier_id else None
+        supplier_id=supplier_id if supplier_id else None,
+        consumo_medio_per_coperto=consumo
     )
     db.session.add(new_product)
     db.session.commit()
     flash("Prodotto aggiunto al magazzino.")
+    return redirect(url_for('main.inventory'))
+
+
+@main.route('/update_consumo_coperto/<int:product_id>', methods=['POST'])
+@login_required
+def update_consumo_coperto(product_id):
+    """Aggiorna il consumo medio per coperto di un prodotto esistente."""
+    product = Product.query.get_or_404(product_id)
+    if product.user_id != current_user.get_restaurant_id:
+        flash("❌ Accesso negato.")
+        return redirect(url_for('main.inventory'))
+
+    consumo_str = request.form.get('consumo_medio_per_coperto', '').strip()
+    try:
+        consumo = float(consumo_str)
+        if consumo < 0:
+            raise ValueError
+        product.consumo_medio_per_coperto = consumo
+        db.session.commit()
+        flash(f"Consumo per coperto aggiornato per '{product.name}'.")
+    except (ValueError, TypeError):
+        flash("❌ Valore non valido per il consumo per coperto.")
+
     return redirect(url_for('main.inventory'))
 
 @main.route('/align_inventory/<int:product_id>', methods=['POST'])

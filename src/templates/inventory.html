@@ -38,6 +38,8 @@
                     <input type="text"   name="unit"      placeholder="Unità (kg, l…)" required>
                     <input type="number" step="0.01" name="threshold" placeholder="Soglia Min." required>
                     <input type="number" step="0.01" name="unit_cost" placeholder="Costo/Unità €">
+                    <input type="number" step="0.001" min="0" name="consumo_medio_per_coperto"
+                           placeholder="Consumo/cop." title="Consumo medio per coperto (stessa unità del prodotto, es. 0.1 per 100g in kg)">
                     <select name="supplier_id">
                         <option value="">Fornitore…</option>
                         {% for s in suppliers %}
@@ -57,6 +59,12 @@
                 <div class="card-icon"><i data-lucide="package"></i></div>
                 <h3>Inventario</h3>
                 <span class="badge badge-muted">{{ products | length }} prodotti</span>
+                {% if total_guests_7d > 0 %}
+                <span class="badge badge-info" style="margin-left: 8px;">
+                    <i data-lucide="calendar-days"></i>
+                    {{ total_guests_7d }} coperti previsti (prossimi 7gg)
+                </span>
+                {% endif %}
             </div>
             <div class="table-container">
                 <table>
@@ -66,11 +74,13 @@
                             <th>Giacenza</th>
                             <th>Costo Unit.</th>
                             <th>Stato</th>
+                            <th>Fabbisogno <small style="font-weight:400;">(7gg)</small></th>
                             <th>Allinea</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for p in products %}
+                        {% set need = estimated_needs.get(p.id, 0) %}
                         <tr>
                             <td class="text-bold td-name" title="{{ p.name }}">{{ p.name }}</td>
                             <td>{{ p.quantity }} <span class="text-muted text-sm">{{ p.unit }}</span></td>
@@ -84,6 +94,41 @@
                                     <span class="badge badge-success"><i data-lucide="check-circle"></i> Ottimale</span>
                                 {% endif %}
                             </td>
+                            <td style="min-width: 180px;">
+                                {% if total_guests_7d > 0 and p.consumo_medio_per_coperto > 0 %}
+                                    <div style="font-size: 0.78rem; margin-bottom: 5px; line-height: 1.6;">
+                                        <span class="text-muted">Scorta:</span> <strong>{{ p.quantity }} {{ p.unit }}</strong><br>
+                                        <span class="text-muted">Stima:</span> <strong>{{ need }} {{ p.unit }}</strong>
+                                    </div>
+                                    {% if p.quantity >= need %}
+                                        <span class="badge badge-success" style="font-size: 0.7rem;">
+                                            <i data-lucide="check"></i> Sufficiente
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-danger" style="font-size: 0.7rem;">
+                                            <i data-lucide="alert-triangle"></i>
+                                            Mancano {{ (need - p.quantity) | round(3) }} {{ p.unit }}
+                                        </span>
+                                    {% endif %}
+                                {% elif total_guests_7d == 0 %}
+                                    <span class="text-muted text-sm">Nessuna prenotazione</span>
+                                {% else %}
+                                    <span class="text-muted text-sm" style="font-style: italic;">Configura consumo →</span>
+                                {% endif %}
+                                <!-- Mini-form per impostare/aggiornare consumo/coperto -->
+                                <form action="{{ url_for('main.update_consumo_coperto', product_id=p.id) }}" method="POST"
+                                      class="align-form" style="margin-top: 6px;">
+                                    <input type="number" step="0.001" min="0"
+                                           name="consumo_medio_per_coperto"
+                                           value="{{ p.consumo_medio_per_coperto if p.consumo_medio_per_coperto else '' }}"
+                                           placeholder="{{ p.unit }}/cop."
+                                           class="input-mini" style="width: 90px;"
+                                           title="Consumo medio per coperto ({{ p.unit }} a persona)">
+                                    <button type="submit" class="btn-icon" title="Aggiorna consumo per coperto">
+                                        <i data-lucide="zap"></i>
+                                    </button>
+                                </form>
+                            </td>
                             <td>
                                 <form action="{{ url_for('main.align_inventory', product_id=p.id) }}" method="POST" class="align-form">
                                     <input type="number" step="0.01" name="actual_quantity"
@@ -96,7 +141,7 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="5" class="text-center text-muted" style="padding: 32px;">
+                            <td colspan="6" class="text-center text-muted" style="padding: 32px;">
                                 Nessun prodotto nel magazzino. Aggiungine uno sopra!
                             </td>
                         </tr>
