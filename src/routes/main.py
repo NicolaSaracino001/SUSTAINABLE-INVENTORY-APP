@@ -13,7 +13,6 @@ import time
 from google import genai as genai_sdk
 from google.genai import types as genai_types
 import urllib.parse
-import requests
 
 main = Blueprint('main', __name__)
 
@@ -1892,5 +1891,3 @@ def calendar_update():
 
     db.session.commit()
     return redirect(url_for('main.calendar', month=target_date.strftime('%Y-%m')))
-    flash("Analisi scontrino annullata.")
-    return redirect(url_for('main.sales_offload'))

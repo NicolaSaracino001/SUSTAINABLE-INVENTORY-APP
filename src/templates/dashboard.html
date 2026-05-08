@@ -155,11 +155,6 @@
             // Necessario perché Turbo riusa il DOM senza ricaricare la pagina.
             Chart.getChart('inventoryChart')?.destroy();
 
-            // Debug: verifica i dati raw provenienti dal backend
-            console.log("Labels ricevute:",  {{ chart_labels      | tojson | safe }});
-            console.log("Stock ricevuti:",   {{ chart_values      | tojson | safe }});
-            console.log("Consumi ricevuti:", {{ chart_consumption | tojson | safe }});
-
             const ctx = canvas.getContext('2d');
             new Chart(ctx, {
                 type: 'bar',
