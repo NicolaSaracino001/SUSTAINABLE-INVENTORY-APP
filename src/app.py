@@ -181,6 +181,20 @@ def create_app(config_name: str = None) -> Flask:
                 except Exception:
                     pass   # già aggiornata o non necessario
 
+        # Fase 46.2 — consumo_medio_per_coperto su product
+        product_cols = [c['name'] for c in inspector.get_columns('product')]
+        if 'consumo_medio_per_coperto' not in product_cols:
+            try:
+                with db.engine.connect() as conn:
+                    conn.execute(text(
+                        'ALTER TABLE product ADD COLUMN consumo_medio_per_coperto FLOAT DEFAULT 0.0'
+                    ))
+                    conn.commit()
+                logger.info('  Migration : product.consumo_medio_per_coperto aggiunta ✓')
+            except Exception as _mig_err:
+                # La colonna esiste già (DuplicateColumn) oppure errore non critico — ignora
+                logger.warning(f'  Migration : consumo_medio_per_coperto già presente o errore ignorato: {_mig_err}')
+
         logger.info('━' * 58)
 
     # ── Gestori errori personalizzati ──────────────────────────────────────
