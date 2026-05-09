@@ -1907,17 +1907,32 @@ def pricing():
 @login_required
 def create_checkout_session():
     import stripe
-    stripe.api_key = os.environ.get('STRIPE_SECRET_KEY')
 
-    if not stripe.api_key:
-        return jsonify({'error': 'Stripe non configurato sul server.'}), 500
+    # ── Leggi la chiave da tutte le varianti di nome usate su Vercel ──────────
+    # Vercel espone talvolta le env vars con prefisso diverso; proviamo
+    # entrambe le varianti per robustezza.
+    stripe_key = (
+        os.environ.get('STRIPE_SECRET_KEY') or
+        os.environ.get('STRIPE_SECRET_KEY_LIVE') or
+        os.environ.get('STRIPE_KEY')
+    )
+
+    # ── Log di diagnostica (visibile nei log di Vercel / Railway) ─────────────
+    current_app.logger.info('Stripe init — key present: %s | env keys: %s',
+                            bool(stripe_key),
+                            [k for k in os.environ if 'STRIPE' in k.upper()])
+
+    if not stripe_key:
+        current_app.logger.error('STRIPE_SECRET_KEY mancante nelle variabili d\'ambiente.')
+        return jsonify({'error': 'Missing STRIPE_SECRET_KEY — controlla le env vars su Vercel.'}), 500
+
+    stripe.api_key = stripe_key
 
     price_id = os.environ.get('STRIPE_PRICE_ID', 'price_1TV8cjPInizwkcruvxslRiQl')
-
     base_url = request.host_url.rstrip('/')
 
     try:
-        # Recupera o crea il customer Stripe associato all'utente
+        # ── Recupera o crea il customer Stripe ────────────────────────────────
         customer_id = current_user.stripe_customer_id
         if not customer_id:
             customer = stripe.Customer.create(
@@ -1937,11 +1952,21 @@ def create_checkout_session():
             success_url=base_url + url_for('main.payment_success') + '?session_id={CHECKOUT_SESSION_ID}',
             cancel_url=base_url + url_for('main.pricing'),
         )
+        current_app.logger.info('Stripe session created: %s', session_obj.id)
         return jsonify({'url': session_obj.url})
 
+    except stripe.error.AuthenticationError as e:
+        # Chiave presente ma non valida (es. test key usata in prod o viceversa)
+        current_app.logger.error('Stripe AuthenticationError: %s', e)
+        return jsonify({'error': 'Chiave Stripe non valida. Verifica che sia la chiave LIVE su Vercel.'}), 401
+
     except stripe.error.StripeError as e:
-        current_app.logger.error(f'Stripe error: {e}')
-        return jsonify({'error': str(e.user_message)}), 400
+        current_app.logger.error('Stripe error: %s', e)
+        return jsonify({'error': getattr(e, 'user_message', str(e))}), 400
+
+    except Exception as e:
+        current_app.logger.error('Errore imprevisto Stripe: %s', e, exc_info=True)
+        return jsonify({'error': 'Errore interno. Controlla i log del server.'}), 500
 
 
 @main.route('/payment-success')
