@@ -1912,7 +1912,7 @@ def create_checkout_session():
     if not stripe.api_key:
         return jsonify({'error': 'Stripe non configurato sul server.'}), 500
 
-    price_id = os.environ.get('STRIPE_PRICE_ID', 'price_PLACEHOLDER')
+    price_id = os.environ.get('STRIPE_PRICE_ID', 'price_1TV8cjPInizwkcruvxslRiQl')
 
     base_url = request.host_url.rstrip('/')
 
