@@ -17,6 +17,8 @@ class User(UserMixin, db.Model):
     must_change_password = db.Column(db.Boolean, default=False)
     monthly_budget = db.Column(db.Float, default=0.0)
     profile_image = db.Column(db.String(500), default='default')
+    stripe_customer_id = db.Column(db.String(255), nullable=True)
+    subscription_status = db.Column(db.String(50), default='trial')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

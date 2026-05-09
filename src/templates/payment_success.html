@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FoodLoop — Benvenuto su Premium!</title>
+    <link rel="icon" href="{{ url_for('static', filename='logo.png') }}?v=3" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/foodloop.css') }}">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .success-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        .success-card {
+            background: #fff;
+            border: 1.5px solid #bbf7d0;
+            border-radius: 20px;
+            padding: 48px 40px;
+            max-width: 480px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,.07);
+        }
+
+        .success-icon {
+            width: 72px;
+            height: 72px;
+            background: #f0fdf4;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            color: #22c55e;
+        }
+
+        .success-card h1 {
+            font-size: 1.7rem;
+            font-weight: 800;
+            color: #111827;
+            margin-bottom: 12px;
+        }
+
+        .success-card p {
+            color: #6b7280;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+
+        .btn-goto {
+            display: inline-block;
+            padding: 13px 28px;
+            background: #6366f1;
+            color: #fff;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-decoration: none;
+            transition: opacity .15s;
+        }
+
+        .btn-goto:hover { opacity: .88; }
+    </style>
+</head>
+<body>
+    <div class="success-container">
+        <div class="success-card">
+            <div class="success-icon">
+                <i data-lucide="check-circle-2" style="width:36px;height:36px;"></i>
+            </div>
+            <h1>Pagamento completato!</h1>
+            <p>
+                Benvenuto su <strong>FoodLoop Premium</strong>.<br>
+                Il tuo account è ora attivo. Tutte le funzionalità sono sbloccate.<br><br>
+                Riceverai una conferma via email a <strong>{{ current_user.email }}</strong>.
+            </p>
+            <a href="{{ url_for('main.dashboard') }}" class="btn-goto">
+                Vai alla Dashboard
+            </a>
+        </div>
+    </div>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

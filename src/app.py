@@ -195,6 +195,34 @@ def create_app(config_name: str = None) -> Flask:
                 # La colonna esiste già (DuplicateColumn) oppure errore non critico — ignora
                 logger.warning(f'  Migration : consumo_medio_per_coperto già presente o errore ignorato: {_mig_err}')
 
+        # Fase 48.1 — stripe_customer_id e subscription_status su user
+        user_cols_names = [c['name'] for c in inspector.get_columns('user')]
+        if 'stripe_customer_id' not in user_cols_names:
+            try:
+                with db.engine.connect() as conn:
+                    conn.execute(text('ALTER TABLE "user" ADD COLUMN stripe_customer_id VARCHAR(255)'))
+                    conn.commit()
+                logger.info('  Migration : user.stripe_customer_id aggiunta ✓')
+            except Exception as _mig_err:
+                logger.warning(f'  Migration : stripe_customer_id già presente o errore ignorato: {_mig_err}')
+
+        if 'subscription_status' not in user_cols_names:
+            try:
+                with db.engine.connect() as conn:
+                    dialect = db.engine.dialect.name
+                    if dialect == 'postgresql':
+                        conn.execute(text(
+                            "ALTER TABLE \"user\" ADD COLUMN subscription_status VARCHAR(50) DEFAULT 'trial'"
+                        ))
+                    else:
+                        conn.execute(text(
+                            "ALTER TABLE user ADD COLUMN subscription_status VARCHAR(50) DEFAULT 'trial'"
+                        ))
+                    conn.commit()
+                logger.info('  Migration : user.subscription_status aggiunta ✓')
+            except Exception as _mig_err:
+                logger.warning(f'  Migration : subscription_status già presente o errore ignorato: {_mig_err}')
+
         logger.info('━' * 58)
 
     # ── Gestori errori personalizzati ──────────────────────────────────────

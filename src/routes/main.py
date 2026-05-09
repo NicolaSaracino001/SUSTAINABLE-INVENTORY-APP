@@ -1891,3 +1891,67 @@ def calendar_update():
 
     db.session.commit()
     return redirect(url_for('main.calendar', month=target_date.strftime('%Y-%m')))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Fase 48.1 — Stripe Checkout
+# ══════════════════════════════════════════════════════════════════════════════
+
+@main.route('/pricing')
+@login_required
+def pricing():
+    return render_template('pricing.html', sidebar_active='pricing')
+
+
+@main.route('/create-checkout-session', methods=['POST'])
+@login_required
+def create_checkout_session():
+    import stripe
+    stripe.api_key = os.environ.get('STRIPE_SECRET_KEY')
+
+    if not stripe.api_key:
+        return jsonify({'error': 'Stripe non configurato sul server.'}), 500
+
+    price_id = os.environ.get('STRIPE_PRICE_ID', 'price_PLACEHOLDER')
+
+    base_url = request.host_url.rstrip('/')
+
+    try:
+        # Recupera o crea il customer Stripe associato all'utente
+        customer_id = current_user.stripe_customer_id
+        if not customer_id:
+            customer = stripe.Customer.create(
+                email=current_user.email,
+                name=current_user.full_name,
+                metadata={'user_id': current_user.id}
+            )
+            current_user.stripe_customer_id = customer.id
+            db.session.commit()
+            customer_id = customer.id
+
+        session_obj = stripe.checkout.Session.create(
+            customer=customer_id,
+            payment_method_types=['card'],
+            line_items=[{'price': price_id, 'quantity': 1}],
+            mode='subscription',
+            success_url=base_url + url_for('main.payment_success') + '?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url=base_url + url_for('main.pricing'),
+        )
+        return jsonify({'url': session_obj.url})
+
+    except stripe.error.StripeError as e:
+        current_app.logger.error(f'Stripe error: {e}')
+        return jsonify({'error': str(e.user_message)}), 400
+
+
+@main.route('/payment-success')
+@login_required
+def payment_success():
+    return render_template('payment_success.html', sidebar_active='pricing')
+
+
+@main.route('/payment-cancel')
+@login_required
+def payment_cancel():
+    flash('Pagamento annullato. Puoi riprovare quando vuoi.', 'info')
+    return redirect(url_for('main.pricing'))

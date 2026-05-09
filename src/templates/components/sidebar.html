@@ -50,6 +50,10 @@
            class="nav-item {% if sidebar_active == 'analytics' %}active{% endif %}">
             <i data-lucide="pie-chart"></i> Reports & Analysis
         </a>
+        <a href="{{ url_for('main.pricing') }}"
+           class="nav-item {% if sidebar_active == 'pricing' %}active{% endif %}">
+            <i data-lucide="credit-card"></i> Abbonamento
+        </a>
 
         {% if current_user.role == 'owner' %}
         <span class="nav-section">Impostazioni</span>
