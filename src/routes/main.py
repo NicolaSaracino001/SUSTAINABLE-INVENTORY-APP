@@ -2034,15 +2034,22 @@ def stripe_webhook():
 
             if user_id:
                 try:
-                    user = User.query.get(int(user_id))
+                    user_id_int = int(user_id)
+                except (ValueError, TypeError) as e:
+                    print(f'Webhook ERROR — client_reference_id non convertibile in int: {user_id!r} → {e}')
+                    return jsonify({'error': f'client_reference_id non valido: {user_id!r}'}), 400
+
+                try:
+                    # User.query.get() è deprecato in SQLAlchemy 2.x — uso filter_by
+                    user = User.query.filter_by(id=user_id_int).first()
                     if user:
                         user.subscription_status = 'premium'
                         db.session.commit()
-                        print(f'Webhook OK: utente {user_id} aggiornato a premium.')
-                        current_app.logger.info('Webhook: utente %s → premium.', user_id)
+                        print(f'Webhook OK: utente {user_id_int} aggiornato a premium.')
+                        current_app.logger.info('Webhook: utente %s → premium.', user_id_int)
                     else:
-                        print(f'Webhook WARN: utente {user_id} non trovato nel DB.')
-                        current_app.logger.warning('Webhook: utente %s non trovato.', user_id)
+                        print(f'Webhook WARN: utente {user_id_int} non trovato nel DB.')
+                        current_app.logger.warning('Webhook: utente %s non trovato.', user_id_int)
                 except Exception as e:
                     print(f'Errore DB: {str(e)}')
                     traceback.print_exc()
@@ -2057,7 +2064,8 @@ def stripe_webhook():
 
     except Exception as e:
         # ── CATCH-ALL: questa rotta non restituisce MAI HTML ──────────────────
-        traceback.print_exc()   # stampa il traceback completo nei log di Vercel
+        trace = traceback.format_exc()  # cattura il traceback come stringa
+        traceback.print_exc()           # stampa anche nei log di Vercel
         print(f'Webhook FATAL: {str(e)}')
         current_app.logger.error('Webhook — errore imprevisto: %s', e, exc_info=True)
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': str(e), 'traceback': trace}), 500
