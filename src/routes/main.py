@@ -2030,7 +2030,8 @@ def stripe_webhook():
         # ── Gestione evento ───────────────────────────────────────────────────
         if event['type'] == 'checkout.session.completed':
             session_data = event['data']['object']
-            user_id = session_data.get('client_reference_id')
+            # StripeObject non supporta .get() — uso getattr con default None
+            user_id = getattr(session_data, 'client_reference_id', None)
 
             if user_id:
                 try:
