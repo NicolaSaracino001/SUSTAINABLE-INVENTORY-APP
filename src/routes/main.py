@@ -1985,49 +1985,72 @@ def payment_cancel():
 
 @main.route('/webhook', methods=['POST'])
 def stripe_webhook():
+    """
+    Endpoint Stripe Webhook — nessun @login_required, nessun CSRF token.
+    Flask-WTF non è installato, quindi non serve @csrf.exempt.
+    L'outer try/except garantisce che Flask non restituisca mai HTML in caso di errore.
+    """
     import stripe
-    from src.models.models import User
-
-    webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET')
-    if not webhook_secret:
-        current_app.logger.error('STRIPE_WEBHOOK_SECRET mancante nelle variabili d\'ambiente.')
-        return jsonify({'error': 'Webhook secret non configurato.'}), 500
-
-    stripe.api_key = (
-        os.environ.get('STRIPE_SECRET_KEY') or
-        os.environ.get('STRIPE_SECRET_KEY_LIVE') or
-        os.environ.get('STRIPE_KEY')
-    )
-
-    payload = request.get_data()
-    sig_header = request.headers.get('Stripe-Signature', '')
 
     try:
-        event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
-    except ValueError:
-        current_app.logger.warning('Webhook: payload non valido.')
-        return jsonify({'error': 'Payload non valido.'}), 400
-    except stripe.error.SignatureVerificationError:
-        current_app.logger.warning('Webhook: firma non valida.')
-        return jsonify({'error': 'Firma non valida.'}), 400
+        # ── Configurazione ────────────────────────────────────────────────────
+        webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET')
+        if not webhook_secret:
+            print('Webhook — STRIPE_WEBHOOK_SECRET mancante.')
+            current_app.logger.error('Webhook: STRIPE_WEBHOOK_SECRET mancante.')
+            return jsonify({'error': 'Webhook secret non configurato.'}), 500
 
-    if event['type'] == 'checkout.session.completed':
-        session = event['data']['object']
-        user_id = session.get('client_reference_id')
+        stripe.api_key = (
+            os.environ.get('STRIPE_SECRET_KEY') or
+            os.environ.get('STRIPE_SECRET_KEY_LIVE') or
+            os.environ.get('STRIPE_KEY')
+        )
 
-        if user_id:
-            user = User.query.get(int(user_id))
-            if user:
-                user.subscription_status = 'premium'
-                db.session.commit()
-                current_app.logger.info(
-                    'Webhook: utente %s aggiornato a premium.', user_id
-                )
+        # ── Lettura raw bytes — OBBLIGATORIA prima di construct_event ─────────
+        payload = request.get_data()
+        sig_header = request.headers.get('Stripe-Signature', '')
+
+        # ── Verifica firma Stripe ─────────────────────────────────────────────
+        try:
+            event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
+        except ValueError as e:
+            print(f'Webhook — payload non valido: {e}')
+            current_app.logger.warning('Webhook: payload non valido: %s', e)
+            return jsonify({'error': 'Payload non valido.'}), 400
+        except stripe.error.SignatureVerificationError as e:
+            print(f'Webhook — firma non valida: {e}')
+            current_app.logger.warning('Webhook: firma non valida: %s', e)
+            return jsonify({'error': 'Firma non valida.'}), 400
+
+        # ── Gestione evento ───────────────────────────────────────────────────
+        if event['type'] == 'checkout.session.completed':
+            session_data = event['data']['object']
+            user_id = session_data.get('client_reference_id')
+
+            if user_id:
+                try:
+                    user = User.query.get(int(user_id))
+                    if user:
+                        user.subscription_status = 'premium'
+                        db.session.commit()
+                        print(f'Webhook: utente {user_id} aggiornato a premium.')
+                        current_app.logger.info('Webhook: utente %s → premium.', user_id)
+                    else:
+                        print(f'Webhook: utente {user_id} non trovato nel DB.')
+                        current_app.logger.warning('Webhook: utente %s non trovato.', user_id)
+                except Exception as e:
+                    print(f'Errore DB: {str(e)}')
+                    current_app.logger.error('Webhook — errore DB: %s', e, exc_info=True)
+                    db.session.rollback()
+                    return jsonify({'error': 'Errore DB interno.'}), 500
             else:
-                current_app.logger.warning(
-                    'Webhook: nessun utente trovato con id %s.', user_id
-                )
-        else:
-            current_app.logger.warning('Webhook: client_reference_id assente nella sessione.')
+                print('Webhook: client_reference_id assente nella sessione.')
+                current_app.logger.warning('Webhook: client_reference_id assente.')
 
-    return jsonify({'status': 'ok'}), 200
+        return jsonify({'status': 'ok'}), 200
+
+    except Exception as e:
+        # Catch-all: impedisce a Flask di restituire la pagina HTML 500
+        print(f'Webhook — errore imprevisto: {str(e)}')
+        current_app.logger.error('Webhook — errore imprevisto: %s', e, exc_info=True)
+        return jsonify({'error': f'Errore interno: {str(e)}'}), 500
