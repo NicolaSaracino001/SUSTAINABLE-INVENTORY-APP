@@ -1987,16 +1987,21 @@ def payment_cancel():
 def stripe_webhook():
     """
     Endpoint Stripe Webhook — nessun @login_required, nessun CSRF token.
-    Flask-WTF non è installato, quindi non serve @csrf.exempt.
-    L'outer try/except garantisce che Flask non restituisca mai HTML in caso di errore.
+    Flask-WTF non è installato: non serve @csrf.exempt.
+
+    DIFESA ASSOLUTA: tutto il corpo è avvolto in try/except Exception.
+    Questa rotta non restituisce mai HTML — solo JSON.
+    Il @app.errorhandler(500) globale NON viene mai raggiunto.
     """
-    import stripe
+    import traceback  # importato qui per garantirne la disponibilità nel catch
 
     try:
+        import stripe  # dentro il try: ImportError viene catturato e loggato
+
         # ── Configurazione ────────────────────────────────────────────────────
         webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET')
         if not webhook_secret:
-            print('Webhook — STRIPE_WEBHOOK_SECRET mancante.')
+            print('Webhook ERROR: STRIPE_WEBHOOK_SECRET mancante.')
             current_app.logger.error('Webhook: STRIPE_WEBHOOK_SECRET mancante.')
             return jsonify({'error': 'Webhook secret non configurato.'}), 500
 
@@ -2014,11 +2019,11 @@ def stripe_webhook():
         try:
             event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
         except ValueError as e:
-            print(f'Webhook — payload non valido: {e}')
+            print(f'Webhook ERROR — payload non valido: {e}')
             current_app.logger.warning('Webhook: payload non valido: %s', e)
             return jsonify({'error': 'Payload non valido.'}), 400
         except stripe.error.SignatureVerificationError as e:
-            print(f'Webhook — firma non valida: {e}')
+            print(f'Webhook ERROR — firma non valida: {e}')
             current_app.logger.warning('Webhook: firma non valida: %s', e)
             return jsonify({'error': 'Firma non valida.'}), 400
 
@@ -2033,24 +2038,26 @@ def stripe_webhook():
                     if user:
                         user.subscription_status = 'premium'
                         db.session.commit()
-                        print(f'Webhook: utente {user_id} aggiornato a premium.')
+                        print(f'Webhook OK: utente {user_id} aggiornato a premium.')
                         current_app.logger.info('Webhook: utente %s → premium.', user_id)
                     else:
-                        print(f'Webhook: utente {user_id} non trovato nel DB.')
+                        print(f'Webhook WARN: utente {user_id} non trovato nel DB.')
                         current_app.logger.warning('Webhook: utente %s non trovato.', user_id)
                 except Exception as e:
                     print(f'Errore DB: {str(e)}')
+                    traceback.print_exc()
                     current_app.logger.error('Webhook — errore DB: %s', e, exc_info=True)
                     db.session.rollback()
-                    return jsonify({'error': 'Errore DB interno.'}), 500
+                    return jsonify({'error': f'Errore DB: {str(e)}'}), 500
             else:
-                print('Webhook: client_reference_id assente nella sessione.')
+                print('Webhook WARN: client_reference_id assente nella sessione.')
                 current_app.logger.warning('Webhook: client_reference_id assente.')
 
         return jsonify({'status': 'ok'}), 200
 
     except Exception as e:
-        # Catch-all: impedisce a Flask di restituire la pagina HTML 500
-        print(f'Webhook — errore imprevisto: {str(e)}')
+        # ── CATCH-ALL: questa rotta non restituisce MAI HTML ──────────────────
+        traceback.print_exc()   # stampa il traceback completo nei log di Vercel
+        print(f'Webhook FATAL: {str(e)}')
         current_app.logger.error('Webhook — errore imprevisto: %s', e, exc_info=True)
-        return jsonify({'error': f'Errore interno: {str(e)}'}), 500
+        return jsonify({'error': str(e)}), 500

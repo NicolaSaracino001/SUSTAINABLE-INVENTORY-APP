@@ -233,8 +233,12 @@ def create_app(config_name: str = None) -> Flask:
 
     @app.errorhandler(500)
     def internal_error(e):
+        from flask import request as flask_request, jsonify as flask_jsonify
         db.session.rollback()   # evita sessioni DB corrotte dopo un errore
         logger.error(f'500 — errore interno: {e}', exc_info=True)
+        # Le rotte API/webhook restituiscono sempre JSON, mai HTML
+        if flask_request.path.startswith('/webhook') or flask_request.path.startswith('/api/'):
+            return flask_jsonify({'error': str(e)}), 500
         return render_template('errors/500.html'), 500
 
     @app.route('/')
