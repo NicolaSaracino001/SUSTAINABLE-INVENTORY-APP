@@ -1946,6 +1946,7 @@ def create_checkout_session():
 
         session_obj = stripe.checkout.Session.create(
             customer=customer_id,
+            client_reference_id=str(current_user.id),
             payment_method_types=['card'],
             line_items=[{'price': price_id, 'quantity': 1}],
             mode='subscription',
@@ -1980,3 +1981,53 @@ def payment_success():
 def payment_cancel():
     flash('Pagamento annullato. Puoi riprovare quando vuoi.', 'info')
     return redirect(url_for('main.pricing'))
+
+
+@main.route('/webhook', methods=['POST'])
+def stripe_webhook():
+    import stripe
+    from src.models.models import User
+
+    webhook_secret = os.environ.get('STRIPE_WEBHOOK_SECRET')
+    if not webhook_secret:
+        current_app.logger.error('STRIPE_WEBHOOK_SECRET mancante nelle variabili d\'ambiente.')
+        return jsonify({'error': 'Webhook secret non configurato.'}), 500
+
+    stripe.api_key = (
+        os.environ.get('STRIPE_SECRET_KEY') or
+        os.environ.get('STRIPE_SECRET_KEY_LIVE') or
+        os.environ.get('STRIPE_KEY')
+    )
+
+    payload = request.get_data()
+    sig_header = request.headers.get('Stripe-Signature', '')
+
+    try:
+        event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
+    except ValueError:
+        current_app.logger.warning('Webhook: payload non valido.')
+        return jsonify({'error': 'Payload non valido.'}), 400
+    except stripe.error.SignatureVerificationError:
+        current_app.logger.warning('Webhook: firma non valida.')
+        return jsonify({'error': 'Firma non valida.'}), 400
+
+    if event['type'] == 'checkout.session.completed':
+        session = event['data']['object']
+        user_id = session.get('client_reference_id')
+
+        if user_id:
+            user = User.query.get(int(user_id))
+            if user:
+                user.subscription_status = 'premium'
+                db.session.commit()
+                current_app.logger.info(
+                    'Webhook: utente %s aggiornato a premium.', user_id
+                )
+            else:
+                current_app.logger.warning(
+                    'Webhook: nessun utente trovato con id %s.', user_id
+                )
+        else:
+            current_app.logger.warning('Webhook: client_reference_id assente nella sessione.')
+
+    return jsonify({'status': 'ok'}), 200
