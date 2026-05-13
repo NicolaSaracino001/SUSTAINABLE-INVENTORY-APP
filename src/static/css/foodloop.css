@@ -1287,12 +1287,5 @@ body.auth-page::before { display: none; }
   background-color: #28a745;
 }
 
-/* Animazione di entrata per i contenuti caricati da Turbo */
-body {
-  animation: fadeIn 0.4s ease-in-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
+/* Nessuna animazione globale sul body: causerebbe flickering su ogni
+   navigazione Turbo Drive (opacity 0 → 1 ad ogni cambio pagina). */
