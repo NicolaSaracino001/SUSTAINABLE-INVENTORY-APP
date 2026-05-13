@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, send_from_directory, current_app, session, jsonify
 from flask_login import login_required, current_user
 from src.models.models import MenuItem, RecipeItem, Product, ConsumptionLog, User, Supplier, WasteLog, SaleLog, DailyGuests, db
+from src.utils.mailer import send_welcome_premium_email
 from datetime import datetime, timedelta
 from functools import wraps
 from werkzeug.utils import secure_filename
@@ -2088,6 +2089,15 @@ def stripe_webhook():
                         db.session.commit()
                         print(f'Webhook OK: utente {user_id_int} aggiornato a active.')
                         current_app.logger.info('Webhook: utente %s → active.', user_id_int)
+
+                        # ── Email di benvenuto Premium ────────────────────────
+                        try:
+                            send_welcome_premium_email(user.email, user.full_name)
+                        except Exception as mail_err:
+                            current_app.logger.warning(
+                                'Webhook: email benvenuto Premium non inviata per utente %s: %s',
+                                user_id_int, mail_err
+                            )
                     else:
                         print(f'Webhook WARN: utente {user_id_int} non trovato nel DB.')
                         current_app.logger.warning('Webhook: utente %s non trovato.', user_id_int)

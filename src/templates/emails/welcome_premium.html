@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="it" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Benvenuto su FoodLoop Premium!</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:'Segoe UI',Tahoma,Geneva,Verdana,Arial,sans-serif;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
+
+  <!-- Wrapper esterno -->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+         style="background-color:#f1f5f9;padding:40px 16px;">
+    <tr>
+      <td align="center" valign="top">
+
+        <!-- Card centrale (max 520px) -->
+        <table role="presentation" width="520" cellpadding="0" cellspacing="0" border="0"
+               style="max-width:520px;width:100%;background-color:#ffffff;border-radius:16px;
+                      overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+
+          <!-- ── HEADER PREMIUM ── -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#4f46e5 0%,#6366f1 60%,#818cf8 100%);
+                       padding:36px 40px 32px;text-align:center;">
+              <p style="margin:0 0 10px;font-size:36px;line-height:1;">&#128081;</p>
+              <h1 style="margin:0 0 6px;color:#ffffff;font-size:24px;font-weight:800;
+                         letter-spacing:-0.4px;line-height:1.2;">FoodLoop Premium</h1>
+              <p style="margin:0;color:rgba(255,255,255,0.85);font-size:13px;font-weight:500;
+                        letter-spacing:0.3px;text-transform:uppercase;">Il tuo account è attivo</p>
+            </td>
+          </tr>
+
+          <!-- ── BODY ── -->
+          <tr>
+            <td style="padding:36px 40px 28px;">
+
+              <!-- Saluto principale -->
+              <p style="margin:0 0 6px;font-size:20px;font-weight:700;color:#1e293b;">
+                {% if user_name %}Benvenuto, {{ user_name }}!{% else %}Benvenuto!{% endif %}
+              </p>
+              <p style="margin:0 0 28px;font-size:15px;color:#475569;line-height:1.65;">
+                Il tuo abbonamento <strong style="color:#6366f1;">FoodLoop Premium</strong> è ora attivo.
+                Grazie per la fiducia — hai accesso completo a tutte le funzionalità del piano.
+              </p>
+
+              <!-- Feature list -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="background-color:#f5f3ff;border-radius:12px;
+                            border:1px solid #e0e7ff;margin-bottom:28px;">
+                <tr>
+                  <td style="padding:20px 24px;">
+                    <p style="margin:0 0 14px;font-size:13px;font-weight:700;color:#4f46e5;
+                               text-transform:uppercase;letter-spacing:0.5px;">
+                      Cosa è ora sbloccato
+                    </p>
+
+                    <!-- Feature rows -->
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                      <tr>
+                        <td style="padding:5px 0;">
+                          <span style="font-size:15px;margin-right:10px;">&#9989;</span>
+                          <span style="font-size:14px;color:#374151;">Prodotti e utenti <strong>illimitati</strong></span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:5px 0;">
+                          <span style="font-size:15px;margin-right:10px;">&#9989;</span>
+                          <span style="font-size:14px;color:#374151;"><strong>AI Insights</strong> con Gemini — analisi predittive</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:5px 0;">
+                          <span style="font-size:15px;margin-right:10px;">&#9989;</span>
+                          <span style="font-size:14px;color:#374151;"><strong>Invoice Scanner AI</strong> — carica e digitalizza fatture</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:5px 0;">
+                          <span style="font-size:15px;margin-right:10px;">&#9989;</span>
+                          <span style="font-size:14px;color:#374151;"><strong>Gestione Team</strong> — owner + staff senza limiti</span>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding:5px 0;">
+                          <span style="font-size:15px;margin-right:10px;">&#9989;</span>
+                          <span style="font-size:14px;color:#374151;"><strong>Supporto prioritario</strong> dedicato</span>
+                        </td>
+                      </tr>
+                    </table>
+
+                  </td>
+                </tr>
+              </table>
+
+              <!-- CTA -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                     style="margin-bottom:24px;">
+                <tr>
+                  <td align="center">
+                    <a href="https://foodloop.app/dashboard"
+                       style="display:inline-block;background:linear-gradient(135deg,#4f46e5 0%,#6366f1 100%);
+                              color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;
+                              padding:14px 40px;border-radius:10px;letter-spacing:0.1px;
+                              -webkit-text-size-adjust:none;">
+                      Vai alla Dashboard &#8594;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Gestione abbonamento -->
+              <p style="margin:0;font-size:13px;color:#94a3b8;text-align:center;line-height:1.6;">
+                Puoi gestire o annullare l'abbonamento in qualsiasi momento dalla pagina
+                <a href="https://foodloop.app/pricing"
+                   style="color:#6366f1;text-decoration:none;font-weight:600;">Abbonamento</a>
+                nel tuo account.
+              </p>
+
+            </td>
+          </tr>
+
+          <!-- ── FOOTER ── -->
+          <tr>
+            <td style="background-color:#f8fafc;padding:20px 40px;
+                       border-top:1px solid #e2e8f0;text-align:center;">
+              <p style="margin:0 0 4px;font-size:12px;color:#94a3b8;">
+                Hai ricevuto questa email perché hai attivato un abbonamento su FoodLoop.
+              </p>
+              <p style="margin:0;font-size:12px;color:#cbd5e1;">
+                &copy; {{ 2025 }} FoodLoop &mdash; Tutti i diritti riservati
+              </p>
+            </td>
+          </tr>
+
+        </table>
+        <!-- /Card -->
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
