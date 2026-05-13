@@ -2044,10 +2044,10 @@ def stripe_webhook():
                     # User.query.get() è deprecato in SQLAlchemy 2.x — uso filter_by
                     user = User.query.filter_by(id=user_id_int).first()
                     if user:
-                        user.subscription_status = 'premium'
+                        user.subscription_status = 'active'
                         db.session.commit()
-                        print(f'Webhook OK: utente {user_id_int} aggiornato a premium.')
-                        current_app.logger.info('Webhook: utente %s → premium.', user_id_int)
+                        print(f'Webhook OK: utente {user_id_int} aggiornato a active.')
+                        current_app.logger.info('Webhook: utente %s → active.', user_id_int)
                     else:
                         print(f'Webhook WARN: utente {user_id_int} non trovato nel DB.')
                         current_app.logger.warning('Webhook: utente %s non trovato.', user_id_int)
