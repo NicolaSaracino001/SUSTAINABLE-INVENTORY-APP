@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/foodloop.css') }}">
     <script src="https://unpkg.com/lucide@latest"></script>
     <script type="module" src="https://cdn.jsdelivr.net/npm/@hotwired/turbo@8.0.4/dist/turbo.es2017-esm.js"></script>
+    <meta name="turbo-cache-control" content="no-preview">
     <style>
         .pricing-wrapper {
             max-width: 960px;
@@ -213,18 +214,35 @@
         {% include 'components/flash_messages.html' %}
 
         <div class="pricing-wrapper">
+
+            {% if current_user.subscription_status == 'active' %}
+
+            <!-- ── Utente Premium: pannello di gestione ── -->
+            <div style="max-width:520px;margin:0 auto;text-align:center;">
+                <div style="width:72px;height:72px;background:#eef2ff;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 24px;color:#6366f1;">
+                    <i data-lucide="crown" style="width:36px;height:36px;"></i>
+                </div>
+                <h2 style="font-size:1.6rem;font-weight:800;color:#111827;margin-bottom:10px;">Sei già su FoodLoop Premium</h2>
+                <p style="color:#6b7280;font-size:0.95rem;line-height:1.6;margin-bottom:32px;">
+                    Grazie per il tuo supporto! Tutte le funzionalità sono attive sul tuo account.<br>
+                    Puoi gestire il metodo di pagamento o annullare l'abbonamento in qualsiasi momento dal portale Stripe.
+                </p>
+                <button id="portal-btn" class="btn-plan btn-plan--premium" style="display:inline-block;max-width:320px;margin:0 auto;">
+                    Gestisci o Annulla Abbonamento
+                </button>
+                <p style="font-size:0.8rem;color:#9ca3af;margin-top:16px;">
+                    Verrai reindirizzato al portale sicuro di Stripe.
+                </p>
+            </div>
+
+            {% else %}
+
             <div class="pricing-hero">
                 <h1>Piani semplici, nessuna sorpresa</h1>
                 <p>Inizia gratis, passa a Premium quando sei pronto a scalare il tuo business.</p>
             </div>
 
-            <!-- Banner stato abbonamento corrente -->
-            {% if current_user.subscription_status == 'active' %}
-            <div class="status-banner" style="margin-bottom:32px;">
-                <i data-lucide="check-circle-2" style="width:18px;height:18px;"></i>
-                Sei già su <strong>FoodLoop Premium</strong>. Grazie per il supporto!
-            </div>
-            {% elif current_user.subscription_status == 'trial' %}
+            {% if current_user.subscription_status == 'trial' %}
             <div class="status-banner status-banner--trial" style="margin-bottom:32px;">
                 <i data-lucide="clock" style="width:18px;height:18px;"></i>
                 Stai usando la <strong>versione di prova</strong>. Passa a Premium per sbloccare tutto.
@@ -273,16 +291,9 @@
                         <li><i data-lucide="check" class="feat-icon"></i> Gestione Team completa</li>
                         <li><i data-lucide="check" class="feat-icon"></i> Supporto prioritario</li>
                     </ul>
-
-                    {% if current_user.subscription_status == 'active' %}
-                        <button class="btn-plan btn-plan--premium" disabled style="opacity:.5;cursor:not-allowed;">
-                            Piano attivo
-                        </button>
-                    {% else %}
-                        <button id="checkout-btn" class="btn-plan btn-plan--premium">
-                            Passa a Premium
-                        </button>
-                    {% endif %}
+                    <button id="checkout-btn" class="btn-plan btn-plan--premium">
+                        Passa a Premium
+                    </button>
                 </div>
 
             </div><!-- /pricing-grid -->
@@ -290,17 +301,21 @@
             <p style="text-align:center;font-size:0.82rem;color:#9ca3af;margin-top:28px;">
                 Pagamento sicuro via Stripe. Annulla quando vuoi, senza penali.
             </p>
+
+            {% endif %}
+
         </div>
     </div>
 
     <script>
         lucide.createIcons();
 
-        const btn = document.getElementById('checkout-btn');
-        if (btn) {
-            btn.addEventListener('click', async () => {
-                btn.classList.add('btn-plan--loading');
-                btn.textContent = 'Reindirizzamento…';
+        // ── Checkout (utenti non-premium) ────────────────────────────────────
+        const checkoutBtn = document.getElementById('checkout-btn');
+        if (checkoutBtn) {
+            checkoutBtn.addEventListener('click', async () => {
+                checkoutBtn.classList.add('btn-plan--loading');
+                checkoutBtn.textContent = 'Reindirizzamento…';
 
                 try {
                     const res = await fetch('/create-checkout-session', {
@@ -313,13 +328,42 @@
                         window.location.href = data.url;
                     } else {
                         alert('Errore: ' + (data.error || 'Riprova più tardi.'));
-                        btn.classList.remove('btn-plan--loading');
-                        btn.textContent = 'Passa a Premium';
+                        checkoutBtn.classList.remove('btn-plan--loading');
+                        checkoutBtn.textContent = 'Passa a Premium';
                     }
                 } catch (err) {
                     alert('Errore di rete. Riprova.');
-                    btn.classList.remove('btn-plan--loading');
-                    btn.textContent = 'Passa a Premium';
+                    checkoutBtn.classList.remove('btn-plan--loading');
+                    checkoutBtn.textContent = 'Passa a Premium';
+                }
+            });
+        }
+
+        // ── Customer Portal (utenti premium) ─────────────────────────────────
+        const portalBtn = document.getElementById('portal-btn');
+        if (portalBtn) {
+            portalBtn.addEventListener('click', async () => {
+                portalBtn.classList.add('btn-plan--loading');
+                portalBtn.textContent = 'Apertura portale…';
+
+                try {
+                    const res = await fetch('/create-customer-portal-session', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    const data = await res.json();
+
+                    if (data.url) {
+                        window.location.href = data.url;
+                    } else {
+                        alert('Errore: ' + (data.error || 'Riprova più tardi.'));
+                        portalBtn.classList.remove('btn-plan--loading');
+                        portalBtn.textContent = 'Gestisci o Annulla Abbonamento';
+                    }
+                } catch (err) {
+                    alert('Errore di rete. Riprova.');
+                    portalBtn.classList.remove('btn-plan--loading');
+                    portalBtn.textContent = 'Gestisci o Annulla Abbonamento';
                 }
             });
         }

@@ -1983,6 +1983,46 @@ def payment_cancel():
     return redirect(url_for('main.pricing'))
 
 
+@main.route('/create-customer-portal-session', methods=['POST'])
+@login_required
+def create_customer_portal_session():
+    import stripe
+
+    stripe_key = (
+        os.environ.get('STRIPE_SECRET_KEY') or
+        os.environ.get('STRIPE_SECRET_KEY_LIVE') or
+        os.environ.get('STRIPE_KEY')
+    )
+    if not stripe_key:
+        current_app.logger.error('Customer Portal: STRIPE_SECRET_KEY mancante.')
+        return jsonify({'error': 'Missing STRIPE_SECRET_KEY — controlla le env vars.'}), 500
+
+    stripe.api_key = stripe_key
+
+    customer_id = current_user.stripe_customer_id
+    if not customer_id:
+        current_app.logger.warning('Customer Portal: stripe_customer_id assente per user %s.', current_user.id)
+        return jsonify({'error': 'Nessun profilo di pagamento trovato per questo account.'}), 400
+
+    return_url = request.host_url.rstrip('/') + url_for('main.pricing')
+
+    try:
+        portal_session = stripe.billing_portal.Session.create(
+            customer=customer_id,
+            return_url=return_url,
+        )
+        current_app.logger.info('Customer Portal session created for user %s.', current_user.id)
+        return jsonify({'url': portal_session.url})
+
+    except stripe.error.StripeError as e:
+        current_app.logger.error('Customer Portal StripeError: %s', e)
+        return jsonify({'error': getattr(e, 'user_message', str(e))}), 400
+
+    except Exception as e:
+        current_app.logger.error('Customer Portal errore imprevisto: %s', e, exc_info=True)
+        return jsonify({'error': 'Errore interno. Controlla i log del server.'}), 500
+
+
 @main.route('/webhook', methods=['POST'])
 def stripe_webhook():
     """
