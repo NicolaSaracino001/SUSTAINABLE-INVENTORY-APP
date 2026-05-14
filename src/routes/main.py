@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, send_from_directory, current_app, session, jsonify
 from flask_login import login_required, current_user
-from src.models.models import MenuItem, RecipeItem, Product, ConsumptionLog, User, Supplier, WasteLog, SaleLog, DailyGuests, db
+from src.models.models import MenuItem, RecipeItem, Product, ConsumptionLog, User, Supplier, WasteLog, SaleLog, DailyGuests, Store, db
 from src.utils.mailer import send_welcome_premium_email
 from datetime import datetime, timedelta
 from functools import wraps
@@ -192,6 +192,14 @@ def dashboard():
     else:
         insight = f"Modello Attivo ({total_logs} data points). I trend si stanno stabilizzando."
 
+    stores = []
+    if current_user.role == 'owner':
+        stores = (
+            Store.query.filter_by(owner_id=current_user.id)
+            .order_by(Store.created_at.desc())
+            .all()
+        )
+
     return render_template('dashboard.html',
                            name=current_user.get_restaurant_name,
                            low_stock=low_stock_products,
@@ -203,7 +211,28 @@ def dashboard():
                            budget=budget,
                            budget_percent=round(budget_percent, 1),
                            stock_autonomy=stock_autonomy,
-                           smart_alerts=smart_alerts)
+                           smart_alerts=smart_alerts,
+                           stores=stores)
+
+
+@main.route('/store/create', methods=['POST'])
+@login_required
+@owner_required
+def store_create():
+    """Crea una nuova sede collegata al proprietario (current_user)."""
+    name = (request.form.get('name') or '').strip()
+    if not name:
+        flash("❌ Inserisci il nome della sede o del locale.")
+        return redirect(url_for('main.dashboard'))
+    if len(name) > 255:
+        flash("❌ Il nome della sede non può superare i 255 caratteri.")
+        return redirect(url_for('main.dashboard'))
+    store = Store(name=name, owner_id=current_user.id)
+    db.session.add(store)
+    db.session.commit()
+    flash(f"✅ Sede «{name}» creata con successo.")
+    return redirect(url_for('main.dashboard'))
+
 
 def calculate_estimated_needs(rest_id):
     """

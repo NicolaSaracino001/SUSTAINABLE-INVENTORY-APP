@@ -1277,6 +1277,78 @@ body.auth-page::before { display: none; }
 .hidden   { display: none; }
 .overflow-x-auto { overflow-x: auto; }
 
+/* ── Sedi / modale nuova sede (dashboard, Fase 49) ─────────────────────── */
+.fl-dialog {
+  border: none;
+  border-radius: var(--r-md);
+  padding: 0;
+  max-width: 440px;
+  width: calc(100vw - 32px);
+  background: var(--surface-solid);
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.28);
+}
+.fl-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.42);
+}
+.fl-dialog__inner { padding: 24px; }
+.fl-dialog__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.fl-dialog__head h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-1);
+  line-height: 1.3;
+}
+.stores-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+.store-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-input);
+  transition: border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
+}
+.store-card:hover {
+  border-color: rgba(15, 92, 75, 0.25);
+  background: var(--surface-solid);
+}
+.store-card__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-xs);
+  background: var(--primary-glow);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.store-card__icon i { width: 18px; height: 18px; }
+.store-card__name {
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text-1);
+  margin-bottom: 4px;
+  word-break: break-word;
+}
+.store-card__meta {
+  font-size: 13px;
+  color: var(--text-3);
+  line-height: 1.4;
+}
+
 /* ============================================================
    Turbo Drive — Transizioni Fase 43.2
    ============================================================ */
