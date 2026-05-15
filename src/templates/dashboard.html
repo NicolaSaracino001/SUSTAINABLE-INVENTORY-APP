@@ -32,7 +32,7 @@
             <div class="card-header">
                 <div class="card-icon"><i data-lucide="building-2"></i></div>
                 <h3>Sedi e locali</h3>
-                <button type="button" class="btn btn-primary btn-sm" id="btn-open-store-dialog">
+                <button type="button" class="btn btn-amber btn-sm" id="btn-open-store-dialog">
                     <i data-lucide="plus"></i> Aggiungi Sede/Locale
                 </button>
             </div>
@@ -40,15 +40,21 @@
             <div class="stores-grid">
                 {% for s in stores %}
                 <div class="store-card">
-                    <div class="store-card__icon"><i data-lucide="map-pin"></i></div>
-                    <div class="store-card__body">
-                        <div class="store-card__name">{{ s.name }}</div>
-                        {% if s.address %}
-                        <div class="store-card__meta">{{ s.address }}</div>
-                        {% else %}
-                        <div class="store-card__meta text-muted">Indirizzo non impostato</div>
-                        {% endif %}
+                    <div class="store-card__top">
+                        <div class="store-card__icon"><i data-lucide="map-pin"></i></div>
+                        <div class="store-card__body">
+                            <div class="store-card__name" title="{{ s.name }}">{{ s.name }}</div>
+                            {% if s.address %}
+                            <div class="store-card__meta" title="{{ s.address }}">{{ s.address }}</div>
+                            {% else %}
+                            <div class="store-card__meta text-muted">Indirizzo non impostato</div>
+                            {% endif %}
+                        </div>
                     </div>
+                    <a href="{{ url_for('main.store_dashboard', store_id=s.id) }}"
+                       class="btn btn-sm store-card__manage">
+                        <i data-lucide="settings-2"></i> Gestisci Sede
+                    </a>
                 </div>
                 {% endfor %}
             </div>
@@ -59,10 +65,10 @@
             {% endif %}
         </div>
 
-        <dialog id="store-create-dialog" class="fl-dialog">
+        <dialog id="store-create-dialog" class="fl-dialog fl-dialog--centered" aria-labelledby="store-dialog-title">
             <div class="fl-dialog__inner">
                 <div class="fl-dialog__head">
-                    <h3>Nuova sede</h3>
+                    <h3 id="store-dialog-title">Nuova sede</h3>
                     <button type="button" class="btn-icon" id="btn-close-store-dialog" aria-label="Chiudi">
                         <i data-lucide="x"></i>
                     </button>
@@ -75,7 +81,7 @@
                     </div>
                     <div class="form-row" style="margin-bottom: 0;">
                         <button type="button" class="btn btn-secondary" id="btn-cancel-store-dialog">Annulla</button>
-                        <button type="submit" class="btn btn-primary"><i data-lucide="check"></i> Crea sede</button>
+                        <button type="submit" class="btn btn-amber"><i data-lucide="check"></i> Crea sede</button>
                     </div>
                 </form>
             </div>

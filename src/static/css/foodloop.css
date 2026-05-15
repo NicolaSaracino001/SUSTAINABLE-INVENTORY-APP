@@ -1278,19 +1278,59 @@ body.auth-page::before { display: none; }
 .overflow-x-auto { overflow-x: auto; }
 
 /* ── Sedi / modale nuova sede (dashboard, Fase 49) ─────────────────────── */
+.stores-section {
+  --store-amber: #d97706;
+  --store-amber-dark: #b45309;
+  --store-amber-darker: #92400e;
+  --store-amber-glow: rgba(251, 191, 36, 0.35);
+  --store-amber-bg: #fef3c7;
+  --store-amber-shadow: rgba(217, 119, 6, 0.28);
+}
+.stores-section .card-header .card-icon {
+  background: var(--store-amber-bg);
+  color: var(--store-amber);
+}
+.btn-amber {
+  background: linear-gradient(135deg, var(--store-amber) 0%, var(--store-amber-dark) 100%);
+  color: #fff;
+  border: none;
+  box-shadow: 0 6px 20px var(--store-amber-shadow);
+}
+.btn-amber:hover {
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: 0 12px 32px rgba(217, 119, 6, 0.34);
+}
+.fl-dialog .btn-amber {
+  background: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  box-shadow: 0 6px 20px rgba(217, 119, 6, 0.28);
+}
 .fl-dialog {
   border: none;
-  border-radius: var(--r-md);
+  border-radius: 16px;
   padding: 0;
-  max-width: 440px;
-  width: calc(100vw - 32px);
+  max-width: 28rem;
+  width: min(28rem, calc(100vw - 2rem));
   background: var(--surface-solid);
-  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.28);
+  box-shadow:
+    0 20px 25px -5px rgba(15, 23, 42, 0.14),
+    0 8px 16px -4px rgba(15, 23, 42, 0.10);
+  margin: auto;
+  position: fixed;
+  inset: 0;
+  height: fit-content;
+  max-height: calc(100vh - 4rem);
+  overflow: auto;
 }
 .fl-dialog::backdrop {
-  background: rgba(15, 23, 42, 0.42);
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(2px);
 }
-.fl-dialog__inner { padding: 24px; }
+.fl-dialog__inner {
+  padding: 32px;
+}
+.fl-dialog--centered[open] {
+  display: block;
+}
 .fl-dialog__head {
   display: flex;
   align-items: flex-start;
@@ -1307,46 +1347,85 @@ body.auth-page::before { display: none; }
 }
 .stores-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
 }
 .store-card {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 16px;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
   border-radius: var(--r-sm);
   border: 1px solid var(--border);
   background: var(--surface-input);
   transition: border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
 }
 .store-card:hover {
-  border-color: rgba(15, 92, 75, 0.25);
+  border-color: rgba(217, 119, 6, 0.28);
   background: var(--surface-solid);
+}
+.store-card__top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
 }
 .store-card__icon {
   width: 36px;
   height: 36px;
   border-radius: var(--r-xs);
-  background: var(--primary-glow);
-  color: var(--primary);
+  background: #fef3c7;
+  color: #d97706;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
 .store-card__icon i { width: 18px; height: 18px; }
+.store-card__body {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
 .store-card__name {
   font-weight: 600;
   font-size: 15px;
   color: var(--text-1);
   margin-bottom: 4px;
-  word-break: break-word;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .store-card__meta {
   font-size: 13px;
   color: var(--text-3);
   line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.store-card__manage {
+  width: 100%;
+  justify-content: center;
+  margin-top: auto;
+  box-sizing: border-box;
+  background: var(--surface-solid);
+  color: var(--store-amber-dark, #b45309);
+  border: 1.5px solid var(--store-amber, #d97706);
+  box-shadow: none;
+}
+.store-card__manage:hover {
+  background: var(--store-amber-glow, rgba(251, 191, 36, 0.22));
+  color: var(--store-amber-darker, #92400e);
+  border-color: var(--store-amber-dark, #b45309);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.2);
+}
+.store-card__manage:active {
+  transform: scale(0.98);
+  background: rgba(251, 191, 36, 0.35);
 }
 
 /* ============================================================

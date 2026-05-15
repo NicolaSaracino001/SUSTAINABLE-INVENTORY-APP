@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FoodLoop — {{ store.name }}</title>
+    <link rel="icon" href="{{ url_for('static', filename='logo.png') }}?v=3" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/foodloop.css') }}">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@hotwired/turbo@8.0.4/dist/turbo.es2017-esm.js"></script>
+    <meta name="turbo-cache-control" content="no-preview">
+</head>
+<body>
+    {% include 'components/sidebar.html' %}
+
+    <div class="main-content">
+        <div class="page-header">
+            <div class="page-title">
+                <h1>{{ store.name }}</h1>
+                {% if store.address %}
+                <p>{{ store.address }}</p>
+                {% endif %}
+            </div>
+            <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary">
+                <i data-lucide="arrow-left"></i> Torna alla Dashboard
+            </a>
+        </div>
+
+        {% include 'components/flash_messages.html' %}
+
+        <div class="card" style="text-align: center; padding: 48px 32px; margin-top: 8px;">
+            <div class="card-icon" style="margin: 0 auto 20px; width: 56px; height: 56px;">
+                <i data-lucide="building-2" style="width: 28px; height: 28px;"></i>
+            </div>
+            <p style="font-size: 17px; color: var(--text-2); line-height: 1.6; max-width: 520px; margin: 0 auto;">
+                Benvenuto nel pannello di controllo di <strong>{{ store.name }}</strong>.
+                Qui appariranno i menu e lo staff.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('turbo:load', function () { lucide.createIcons(); });
+        if (document.readyState !== 'loading') lucide.createIcons();
+        else document.addEventListener('DOMContentLoaded', function () { lucide.createIcons(); });
+    </script>
+</body>
+</html>

@@ -234,6 +234,18 @@ def store_create():
     return redirect(url_for('main.dashboard'))
 
 
+@main.route('/store/<int:store_id>')
+@login_required
+@owner_required
+def store_dashboard(store_id):
+    """Pannello di controllo di una singola sede (solo proprietario)."""
+    store = Store.query.get_or_404(store_id)
+    if store.owner_id != current_user.id:
+        flash("❌ Accesso negato: questa sede non ti appartiene.")
+        return redirect(url_for('main.dashboard'))
+    return render_template('store_dashboard.html', store=store)
+
+
 def calculate_estimated_needs(rest_id):
     """
     Calcola fabbisogno stimato (7gg) + data di esaurimento scorte per ogni prodotto.
