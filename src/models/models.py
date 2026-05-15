@@ -19,6 +19,7 @@ class User(UserMixin, db.Model):
     profile_image = db.Column(db.String(500), default='default')
     stripe_customer_id = db.Column(db.String(255), nullable=True)
     subscription_status = db.Column(db.String(50), default='trial')
+    stores = db.relationship('Store', backref='owner', lazy=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -36,6 +37,15 @@ class User(UserMixin, db.Model):
             return self.restaurant_name
         boss = User.query.get(self.parent_id)
         return boss.restaurant_name if boss else "Staff"
+
+
+class Store(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(255), nullable=False)
+    address = db.Column(db.String(500), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+
 
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
