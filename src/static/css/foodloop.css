@@ -1510,6 +1510,121 @@ body.auth-page::before { display: none; }
   word-break: break-word;
 }
 
+/* Tab pannello sede (Fase 51) */
+.store-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.store-tab {
+  display: inline-flex;
+  align-items: center;
+  padding: 12px 20px;
+  margin-bottom: -1px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-3);
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition:
+    color var(--t-fast) var(--ease),
+    border-color var(--t-fast) var(--ease),
+    background var(--t-fast) var(--ease);
+}
+.store-tab:hover:not(.is-disabled) {
+  color: var(--store-amber-dark);
+  background: rgba(254, 243, 199, 0.45);
+}
+.store-tab.is-active {
+  color: var(--store-amber);
+  border-bottom-color: var(--store-amber);
+}
+.store-tab.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.store-tab-panels {
+  margin-top: 20px;
+}
+.store-tab-panel__inner {
+  background: var(--surface-solid);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px;
+  box-shadow:
+    0 10px 15px -3px rgba(15, 23, 42, 0.08),
+    0 4px 6px -4px rgba(15, 23, 42, 0.06);
+}
+.store-tab-panel__placeholder {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--text-2);
+  text-align: center;
+  padding: 24px 16px;
+}
+
+/* Impostazioni sede */
+.store-settings__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 6px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-1);
+}
+.store-settings__title i {
+  width: 20px;
+  height: 20px;
+  color: var(--store-amber);
+}
+.store-settings__subtitle {
+  margin: 0 0 24px;
+  font-size: 14px;
+  color: var(--text-3);
+}
+.store-settings__form input:focus {
+  border-color: var(--store-amber);
+  box-shadow: 0 0 0 4px var(--store-amber-glow);
+}
+.store-settings__danger {
+  margin-top: 32px;
+  padding: 20px 22px;
+  border-radius: var(--r-sm);
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+}
+.store-settings__danger-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #b91c1c;
+}
+.store-settings__danger-title i {
+  width: 18px;
+  height: 18px;
+}
+.store-settings__danger-text {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: #991b1b;
+  line-height: 1.5;
+}
+.store-settings__delete-btn {
+  width: 100%;
+  justify-content: center;
+}
+
 /* ============================================================
    Turbo Drive — Transizioni Fase 43.2
    ============================================================ */

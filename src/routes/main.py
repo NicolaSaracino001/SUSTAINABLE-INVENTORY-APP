@@ -234,6 +234,16 @@ def store_create():
     return redirect(url_for('main.dashboard'))
 
 
+# Tab del pannello sede (Fase 51) — estendere quando si attivano le sezioni
+STORE_PANEL_TABS = (
+    ('panoramica', 'Panoramica'),
+    ('magazzino', 'Magazzino'),
+    ('team', 'Team'),
+    ('impostazioni', 'Impostazioni'),
+)
+STORE_PANEL_ENABLED = frozenset(t[0] for t in STORE_PANEL_TABS)
+
+
 def _user_can_access_store(store):
     """True se la sede appartiene al proprietario (modello attuale multi-sede)."""
     return store.owner_id == current_user.id
@@ -258,7 +268,68 @@ def store_dashboard(store_id):
         flash("❌ Accesso negato: questa sede non ti appartiene.")
         return redirect(url_for('main.dashboard'))
     session['active_store_id'] = store.id
-    return render_template('store_dashboard.html', store=store)
+    active_tab = request.args.get('tab', 'panoramica')
+    if active_tab not in {t[0] for t in STORE_PANEL_TABS}:
+        active_tab = 'panoramica'
+    if active_tab not in STORE_PANEL_ENABLED:
+        flash("ℹ️ Questa sezione sarà disponibile a breve.")
+        active_tab = 'panoramica'
+    return render_template(
+        'store_dashboard.html',
+        store=store,
+        store_tabs=STORE_PANEL_TABS,
+        enabled_tabs=STORE_PANEL_ENABLED,
+        active_tab=active_tab,
+    )
+
+
+@main.route('/store/<int:store_id>/update', methods=['POST'])
+@login_required
+@owner_required
+def store_update(store_id):
+    """Aggiorna nome e indirizzo della sede."""
+    store = Store.query.get_or_404(store_id)
+    if not _user_can_access_store(store):
+        flash("❌ Accesso negato: questa sede non ti appartiene.")
+        return redirect(url_for('main.dashboard'))
+
+    name = (request.form.get('name') or '').strip()
+    address = (request.form.get('address') or '').strip() or None
+
+    if not name:
+        flash("❌ Inserisci il nome della sede o del locale.")
+        return redirect(url_for('main.store_dashboard', store_id=store.id, tab='impostazioni'))
+    if len(name) > 255:
+        flash("❌ Il nome della sede non può superare i 255 caratteri.")
+        return redirect(url_for('main.store_dashboard', store_id=store.id, tab='impostazioni'))
+    if address and len(address) > 500:
+        flash("❌ L'indirizzo non può superare i 500 caratteri.")
+        return redirect(url_for('main.store_dashboard', store_id=store.id, tab='impostazioni'))
+
+    store.name = name
+    store.address = address
+    db.session.commit()
+    flash(f"✅ Sede «{name}» aggiornata con successo.")
+    return redirect(url_for('main.store_dashboard', store_id=store.id, tab='impostazioni'))
+
+
+@main.route('/store/<int:store_id>/delete', methods=['POST'])
+@login_required
+@owner_required
+def store_delete(store_id):
+    """Elimina definitivamente una sede."""
+    store = Store.query.get_or_404(store_id)
+    if not _user_can_access_store(store):
+        flash("❌ Accesso negato: questa sede non ti appartiene.")
+        return redirect(url_for('main.dashboard'))
+
+    store_name = store.name
+    if session.get('active_store_id') == store.id:
+        session.pop('active_store_id', None)
+    db.session.delete(store)
+    db.session.commit()
+    flash(f"✅ Sede «{store_name}» eliminata.")
+    return redirect(url_for('main.dashboard'))
 
 
 def calculate_estimated_needs(rest_id):
