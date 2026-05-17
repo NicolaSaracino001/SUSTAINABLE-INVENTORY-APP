@@ -14,18 +14,16 @@
 <body>
     {% include 'components/sidebar.html' %}
 
-    <div class="main-content store-context">
+    <div class="main-content store-context" data-initial-tab="{{ active_tab }}">
         <div class="page-header">
             <div class="page-title">
                 <span class="store-context__badge">
                     <i data-lucide="map-pin"></i> Sede attiva
                 </span>
-                <h1>{{ store.name }}</h1>
-                {% if store.address %}
-                <p>{{ store.address }}</p>
-                {% else %}
-                <p class="text-muted">Indirizzo non impostato</p>
-                {% endif %}
+                <h1 id="store-display-name">{{ store.name }}</h1>
+                <p id="store-display-address"{% if not store.address %} class="text-muted"{% endif %}>
+                    {% if store.address %}{{ store.address }}{% else %}Indirizzo non impostato{% endif %}
+                </p>
             </div>
             <a href="{{ url_for('main.exit_store') }}" class="btn btn-amber">
                 <i data-lucide="arrow-left"></i> Torna alla Dashboard Principale
@@ -34,50 +32,170 @@
 
         {% include 'components/flash_messages.html' %}
 
-        <div class="card store-context__details">
-            <div class="card-header">
-                <div class="card-icon"><i data-lucide="building-2"></i></div>
-                <h3>Dettagli sede</h3>
-            </div>
-            <ul class="store-context__info">
-                <li>
-                    <span class="store-context__label">Nome</span>
-                    <span class="store-context__value">{{ store.name }}</span>
-                </li>
-                <li>
-                    <span class="store-context__label">Indirizzo</span>
-                    <span class="store-context__value">
-                        {% if store.address %}{{ store.address }}{% else %}<span class="text-muted">—</span>{% endif %}
-                    </span>
-                </li>
-                <li>
-                    <span class="store-context__label">Creata il</span>
-                    <span class="store-context__value">
-                        {{ store.created_at.strftime('%d/%m/%Y') if store.created_at else '—' }}
-                    </span>
-                </li>
-                <li>
-                    <span class="store-context__label">Contesto sessione</span>
-                    <span class="store-context__value">ID #{{ store.id }}</span>
-                </li>
-            </ul>
-        </div>
+        <nav class="store-tabs" role="tablist" aria-label="Sezioni pannello sede">
+            {% for tab_id, tab_label in store_tabs %}
+            <button type="button"
+                    id="store-tab-{{ tab_id }}"
+                    class="store-tab{% if active_tab == tab_id %} is-active{% endif %}"
+                    role="tab"
+                    data-tab="{{ tab_id }}"
+                    aria-selected="{{ 'true' if active_tab == tab_id else 'false' }}"
+                    aria-controls="store-panel-{{ tab_id }}">
+                {{ tab_label }}
+            </button>
+            {% endfor %}
+        </nav>
 
-        <div class="card store-context__welcome" style="text-align: center; padding: 48px 32px; margin-top: 16px;">
-            <div class="card-icon store-context__welcome-icon">
-                <i data-lucide="layout-dashboard"></i>
-            </div>
-            <p style="font-size: 17px; color: var(--text-2); line-height: 1.6; max-width: 520px; margin: 0 auto;">
-                Benvenuto nel pannello di controllo di <strong>{{ store.name }}</strong>.
-                Qui appariranno i menu e lo staff.
-            </p>
+        <div class="store-tab-panels">
+            <section id="store-panel-panoramica"
+                     class="store-tab-panel{% if active_tab == 'panoramica' %} is-active{% endif %}"
+                     role="tabpanel"
+                     aria-labelledby="store-tab-panoramica"
+                     data-tab="panoramica"
+                     {% if active_tab != 'panoramica' %}hidden{% endif %}>
+                <div class="store-tab-panel__inner">
+                    <p class="store-tab-panel__placeholder">
+                        Qui andranno i grafici e le metriche principali della sede.
+                    </p>
+                </div>
+            </section>
+
+            <section id="store-panel-magazzino"
+                     class="store-tab-panel"
+                     role="tabpanel"
+                     aria-labelledby="store-tab-magazzino"
+                     data-tab="magazzino"
+                     hidden>
+                <div class="store-tab-panel__inner">
+                    <p class="store-tab-panel__placeholder">Magazzino — in arrivo.</p>
+                </div>
+            </section>
+
+            <section id="store-panel-team"
+                     class="store-tab-panel"
+                     role="tabpanel"
+                     aria-labelledby="store-tab-team"
+                     data-tab="team"
+                     hidden>
+                <div class="store-tab-panel__inner">
+                    <p class="store-tab-panel__placeholder">Team — in arrivo.</p>
+                </div>
+            </section>
+
+            <section id="store-panel-impostazioni"
+                     class="store-tab-panel{% if active_tab == 'impostazioni' %} is-active{% endif %}"
+                     role="tabpanel"
+                     aria-labelledby="store-tab-impostazioni"
+                     data-tab="impostazioni"
+                     {% if active_tab != 'impostazioni' %}hidden{% endif %}>
+                <div class="store-tab-panel__inner store-settings">
+                    <h3 class="store-settings__title">
+                        <i data-lucide="settings"></i> Dati del locale
+                    </h3>
+                    <p class="store-settings__subtitle">Modifica le informazioni principali di questa sede.</p>
+
+                    <form method="post"
+                          action="{{ url_for('main.store_update', store_id=store.id) }}"
+                          class="store-settings__form">
+                        <div class="form-group" style="margin-bottom: 16px;">
+                            <label class="form-label" for="store-settings-name">Nome sede o locale</label>
+                            <input type="text"
+                                   id="store-settings-name"
+                                   name="name"
+                                   required
+                                   maxlength="255"
+                                   value="{{ store.name }}"
+                                   placeholder="es. Filiale Centro"
+                                   autocomplete="organization">
+                        </div>
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <label class="form-label" for="store-settings-address">Indirizzo</label>
+                            <input type="text"
+                                   id="store-settings-address"
+                                   name="address"
+                                   maxlength="500"
+                                   value="{{ store.address or '' }}"
+                                   placeholder="es. Via Roma 12, Milano"
+                                   autocomplete="street-address">
+                        </div>
+                        <button type="submit" class="btn btn-amber">
+                            <i data-lucide="save"></i> Salva modifiche
+                        </button>
+                    </form>
+
+                    <div class="store-settings__danger">
+                        <h4 class="store-settings__danger-title">
+                            <i data-lucide="alert-triangle"></i> Zona pericolosa
+                        </h4>
+                        <p class="store-settings__danger-text">
+                            L'eliminazione della sede è permanente e non può essere annullata.
+                        </p>
+                        <form method="post"
+                              action="{{ url_for('main.store_delete', store_id=store.id) }}"
+                              class="store-settings__delete-form">
+                            <button type="submit"
+                                    class="btn btn-danger store-settings__delete-btn"
+                                    onclick="return confirm('Sei sicuro di voler eliminare questa sede? L\'azione è irreversibile.')">
+                                <i data-lucide="trash-2"></i> Elimina Sede
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </section>
         </div>
     </div>
 
     <script>
-        document.addEventListener('turbo:load', function () { lucide.createIcons(); });
-        if (document.readyState !== 'loading') lucide.createIcons();
-        else document.addEventListener('DOMContentLoaded', function () { lucide.createIcons(); });
+        function initStoreDashboardIcons() {
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        function activateStoreTab(tabId) {
+            var root = document.querySelector('.store-context');
+            if (!root) return;
+
+            root.querySelectorAll('.store-tab[data-tab]').forEach(function (tab) {
+                var isActive = tab.getAttribute('data-tab') === tabId;
+                tab.classList.toggle('is-active', isActive);
+                tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
+            });
+
+            root.querySelectorAll('.store-tab-panel').forEach(function (panel) {
+                var isActive = panel.getAttribute('data-tab') === tabId;
+                panel.hidden = !isActive;
+                panel.classList.toggle('is-active', isActive);
+            });
+
+            var url = new URL(window.location.href);
+            url.searchParams.set('tab', tabId);
+            history.replaceState(null, '', url.pathname + url.search);
+        }
+
+        function initStoreDashboardTabs() {
+            var root = document.querySelector('.store-context');
+            if (!root || root.dataset.tabsBound === '1') return;
+            root.dataset.tabsBound = '1';
+
+            root.querySelectorAll('.store-tab[data-tab]').forEach(function (tab) {
+                tab.addEventListener('click', function () {
+                    activateStoreTab(tab.getAttribute('data-tab'));
+                });
+            });
+
+            var initial = root.getAttribute('data-initial-tab') || 'panoramica';
+            var params = new URLSearchParams(window.location.search);
+            if (params.get('tab')) initial = params.get('tab');
+            activateStoreTab(initial);
+        }
+
+        function bootStoreDashboard() {
+            initStoreDashboardIcons();
+            initStoreDashboardTabs();
+        }
+
+        document.addEventListener('turbo:load', bootStoreDashboard);
+        if (document.readyState !== 'loading') bootStoreDashboard();
+        else document.addEventListener('DOMContentLoaded', bootStoreDashboard);
     </script>
 </body>
 </html>
