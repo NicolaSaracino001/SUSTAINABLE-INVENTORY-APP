@@ -14,24 +14,58 @@
 <body>
     {% include 'components/sidebar.html' %}
 
-    <div class="main-content">
+    <div class="main-content store-context">
         <div class="page-header">
             <div class="page-title">
+                <span class="store-context__badge">
+                    <i data-lucide="map-pin"></i> Sede attiva
+                </span>
                 <h1>{{ store.name }}</h1>
                 {% if store.address %}
                 <p>{{ store.address }}</p>
+                {% else %}
+                <p class="text-muted">Indirizzo non impostato</p>
                 {% endif %}
             </div>
-            <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary">
-                <i data-lucide="arrow-left"></i> Torna alla Dashboard
+            <a href="{{ url_for('main.exit_store') }}" class="btn btn-amber">
+                <i data-lucide="arrow-left"></i> Torna alla Dashboard Principale
             </a>
         </div>
 
         {% include 'components/flash_messages.html' %}
 
-        <div class="card" style="text-align: center; padding: 48px 32px; margin-top: 8px;">
-            <div class="card-icon" style="margin: 0 auto 20px; width: 56px; height: 56px;">
-                <i data-lucide="building-2" style="width: 28px; height: 28px;"></i>
+        <div class="card store-context__details">
+            <div class="card-header">
+                <div class="card-icon"><i data-lucide="building-2"></i></div>
+                <h3>Dettagli sede</h3>
+            </div>
+            <ul class="store-context__info">
+                <li>
+                    <span class="store-context__label">Nome</span>
+                    <span class="store-context__value">{{ store.name }}</span>
+                </li>
+                <li>
+                    <span class="store-context__label">Indirizzo</span>
+                    <span class="store-context__value">
+                        {% if store.address %}{{ store.address }}{% else %}<span class="text-muted">—</span>{% endif %}
+                    </span>
+                </li>
+                <li>
+                    <span class="store-context__label">Creata il</span>
+                    <span class="store-context__value">
+                        {{ store.created_at.strftime('%d/%m/%Y') if store.created_at else '—' }}
+                    </span>
+                </li>
+                <li>
+                    <span class="store-context__label">Contesto sessione</span>
+                    <span class="store-context__value">ID #{{ store.id }}</span>
+                </li>
+            </ul>
+        </div>
+
+        <div class="card store-context__welcome" style="text-align: center; padding: 48px 32px; margin-top: 16px;">
+            <div class="card-icon store-context__welcome-icon">
+                <i data-lucide="layout-dashboard"></i>
             </div>
             <p style="font-size: 17px; color: var(--text-2); line-height: 1.6; max-width: 520px; margin: 0 auto;">
                 Benvenuto nel pannello di controllo di <strong>{{ store.name }}</strong>.

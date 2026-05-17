@@ -1428,6 +1428,88 @@ body.auth-page::before { display: none; }
   background: rgba(251, 191, 36, 0.35);
 }
 
+/* ── Pannello sede attiva (store_dashboard, Fase 50) ─────────────────── */
+.store-context {
+  --store-amber: #d97706;
+  --store-amber-dark: #b45309;
+  --store-amber-bg: #fef3c7;
+  --store-amber-glow: rgba(251, 191, 36, 0.35);
+}
+.store-context .card-icon,
+.store-context__welcome-icon {
+  background: var(--store-amber-bg);
+  color: var(--store-amber);
+}
+.store-context__welcome-icon {
+  margin: 0 auto 20px;
+  width: 56px;
+  height: 56px;
+}
+.store-context__welcome-icon i {
+  width: 28px;
+  height: 28px;
+}
+.store-context .btn-amber {
+  background: linear-gradient(135deg, var(--store-amber) 0%, var(--store-amber-dark) 100%);
+  box-shadow: 0 6px 20px rgba(217, 119, 6, 0.28);
+}
+.store-context__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--store-amber-dark);
+  background: var(--store-amber-bg);
+  border: 1px solid rgba(217, 119, 6, 0.35);
+  border-radius: 999px;
+  padding: 4px 12px;
+  margin-bottom: 10px;
+}
+.store-context__badge i {
+  width: 14px;
+  height: 14px;
+}
+.store-context__details {
+  margin-top: 8px;
+}
+.store-context__info {
+  list-style: none;
+  margin: 0;
+  padding: 4px 8px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.store-context__info li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.store-context__info li:last-child {
+  border-bottom: none;
+}
+.store-context__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-4);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+.store-context__value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-1);
+  text-align: right;
+  word-break: break-word;
+}
+
 /* ============================================================
    Turbo Drive — Transizioni Fase 43.2
    ============================================================ */
