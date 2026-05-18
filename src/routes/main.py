@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, send_from_directory, current_app, session, jsonify
 from flask_login import login_required, current_user
-from src.models.models import MenuItem, RecipeItem, Product, ConsumptionLog, User, Supplier, WasteLog, SaleLog, DailyGuests, Store, InventoryItem, db
+from src.models.models import MenuItem, RecipeItem, Product, ConsumptionLog, User, Supplier, WasteLog, SaleLog, DailyGuests, Store, InventoryItem, StockAlert, db
 from src.utils.mailer import send_welcome_premium_email
 from datetime import datetime, timedelta
 from functools import wraps
@@ -434,6 +434,135 @@ def store_add_product(store_id):
 
     flash(f"✅ Prodotto «{name}» aggiunto al magazzino.")
     return redirect(url_for('main.store_dashboard', store_id=store_id, tab='magazzino'))
+
+
+@main.route('/store/<int:store_id>/analyze_stock', methods=['POST'])
+@login_required
+@owner_required
+def store_analyze_stock(store_id):
+    """
+    Fase 54 — AI Gemini: analisi predittiva del magazzino per la singola sede.
+    Restituisce JSON con tre sezioni + eventuale criticità grave (salvata su StockAlert).
+    """
+    store = Store.query.get_or_404(store_id)
+    if not _user_can_access_store(store):
+        return jsonify({'error': 'Accesso negato.'}), 403
+
+    api_key = os.getenv('GEMINI_API_KEY')
+    if not api_key:
+        return jsonify({'error': 'Chiave API Gemini non configurata.'}), 500
+
+    from datetime import date as _date
+    today = _date.today()
+
+    items = InventoryItem.query.filter_by(store_id=store_id).order_by(InventoryItem.name).all()
+    if not items:
+        return jsonify({'error': 'Nessun prodotto in magazzino da analizzare.'}), 400
+
+    # ── Componi il contesto inventario da passare a Gemini ────────────────────
+    rows = []
+    for it in items:
+        exp_str = it.expiry_date.strftime('%d/%m/%Y') if it.expiry_date else 'N/D'
+        days_left = (it.expiry_date - today).days if it.expiry_date else None
+        scad_note = ''
+        if days_left is not None:
+            if days_left < 0:
+                scad_note = f' [SCADUTO da {abs(days_left)} giorni]'
+            elif days_left == 0:
+                scad_note = ' [SCADE OGGI]'
+            elif days_left <= 3:
+                scad_note = f' [scade tra {days_left} giorni]'
+        rows.append(f"- {it.name}: {it.quantity} {it.unit}, scadenza {exp_str}{scad_note}")
+
+    inventory_text = '\n'.join(rows)
+    store_label = f"sede «{store.name}»"
+
+    prompt = f"""Sei un assistente esperto di gestione magazzino per ristoranti.
+Analizza questo inventario della {store_label}:
+
+{inventory_text}
+
+Rispondi SOLO con un JSON valido (nessun testo fuori dal JSON) con questa struttura esatta:
+{{
+  "esaurimento": ["punto 1", "punto 2"],
+  "scadenza": ["punto 1", "punto 2"],
+  "consiglio": "consiglio strategico sintetico per il gestore",
+  "criticita_grave": false,
+  "criticita_messaggio": ""
+}}
+
+Regole:
+- "esaurimento": 2-3 punti sui prodotti con quantità bassa o a zero (massimo 100 caratteri ciascuno).
+- "scadenza": 2-3 punti sui prodotti vicini alla scadenza o già scaduti (massimo 100 caratteri ciascuno).
+- "consiglio": un solo consiglio pratico e specifico per questa sede (massimo 150 caratteri).
+- "criticita_grave": true SOLO se c'è almeno un prodotto scaduto o con quantità zero su un ingrediente essenziale.
+- "criticita_messaggio": stringa NON vuota solo se criticita_grave è true; descrivi brevemente il problema critico (massimo 120 caratteri).
+- Se non ci sono problemi in una categoria, scrivi un punto positivo di conferma.
+- Usa l'italiano. Sii conciso e diretto."""
+
+    MODELS_TO_TRY = ['gemini-2.0-flash', 'gemini-2.5-flash-lite']
+    response = None
+    last_exc = None
+
+    try:
+        client = genai_sdk.Client(api_key=api_key)
+
+        for candidate in MODELS_TO_TRY:
+            try:
+                response = client.models.generate_content(
+                    model=candidate,
+                    contents=prompt,
+                    config=genai_types.GenerateContentConfig(
+                        response_mime_type='application/json',
+                        http_options=genai_types.HttpOptions(timeout=45000),
+                    ),
+                )
+                break
+            except Exception as exc:
+                last_exc = exc
+                status = getattr(exc, 'status_code', None) or getattr(exc, 'code', None)
+                if status == 429:
+                    continue
+                raise
+
+        if response is None:
+            raise last_exc
+
+        raw = response.text.replace('```json', '').replace('```', '').strip()
+        data = json.loads(raw)
+
+        # ── Valida e normalizza i campi attesi ────────────────────────────────
+        result = {
+            'esaurimento': data.get('esaurimento', []),
+            'scadenza':    data.get('scadenza', []),
+            'consiglio':   data.get('consiglio', ''),
+            'criticita_grave':    bool(data.get('criticita_grave', False)),
+            'criticita_messaggio': str(data.get('criticita_messaggio', '')),
+        }
+
+        # ── Salva criticità grave su StockAlert ───────────────────────────────
+        if result['criticita_grave'] and result['criticita_messaggio']:
+            # Elimina vecchi alert non risolti per questa sede prima di aggiungerne uno nuovo
+            StockAlert.query.filter_by(store_id=store_id, resolved=False).delete()
+            alert = StockAlert(
+                store_id=store_id,
+                severity='critical',
+                message=result['criticita_messaggio'],
+            )
+            db.session.add(alert)
+            db.session.commit()
+        else:
+            # Nessuna criticità: risolvi eventuali alert precedenti
+            StockAlert.query.filter_by(store_id=store_id, resolved=False).update({'resolved': True})
+            db.session.commit()
+
+        return jsonify(result), 200
+
+    except json.JSONDecodeError:
+        return jsonify({'error': 'Risposta AI non valida. Riprova.'}), 502
+    except Exception as exc:
+        logger.error(f'store_analyze_stock error (store={store_id}): {exc}', exc_info=True)
+        return jsonify({'error': f'Errore AI: {str(exc)[:120]}'}), 502
 
 
 def calculate_estimated_needs(rest_id):

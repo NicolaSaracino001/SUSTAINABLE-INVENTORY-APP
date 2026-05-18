@@ -67,6 +67,65 @@
                      data-tab="magazzino"
                      hidden>
                 <div class="store-tab-panel__inner">
+
+                    <!-- ── Pannello AI ─────────────────────────────────── -->
+                    <div class="store-ai-panel" id="store-ai-panel">
+                        <div class="store-ai-panel__header">
+                            <span class="store-ai-panel__label">
+                                <i data-lucide="sparkles"></i> Analisi Predittiva AI
+                            </span>
+                            <button type="button"
+                                    class="btn btn-amber store-ai-panel__btn"
+                                    id="store-ai-btn"
+                                    data-store-id="{{ store.id }}">
+                                <i data-lucide="sparkles"></i> Genera Analisi AI
+                            </button>
+                        </div>
+
+                        <!-- stato: vuoto iniziale -->
+                        <div class="store-ai-panel__idle" id="store-ai-idle"></div>
+
+                        <!-- stato: loading -->
+                        <div class="store-ai-panel__loading" id="store-ai-loading" hidden>
+                            <span class="store-ai-spinner"></span>
+                            <span>Gemini sta analizzando il magazzino…</span>
+                        </div>
+
+                        <!-- stato: risultato -->
+                        <div class="store-ai-panel__result" id="store-ai-result" hidden>
+                            <div class="store-ai-alert" id="store-ai-critical" hidden>
+                                <i data-lucide="alert-triangle"></i>
+                                <span id="store-ai-critical-msg"></span>
+                            </div>
+                            <div class="store-ai-sections">
+                                <div class="store-ai-section">
+                                    <h4 class="store-ai-section__title">
+                                        <i data-lucide="trending-down"></i> Prodotti critici / in esaurimento
+                                    </h4>
+                                    <ul class="store-ai-section__list" id="store-ai-esaurimento"></ul>
+                                </div>
+                                <div class="store-ai-section">
+                                    <h4 class="store-ai-section__title">
+                                        <i data-lucide="clock"></i> Scadenze imminenti
+                                    </h4>
+                                    <ul class="store-ai-section__list" id="store-ai-scadenza"></ul>
+                                </div>
+                                <div class="store-ai-section store-ai-section--full">
+                                    <h4 class="store-ai-section__title">
+                                        <i data-lucide="lightbulb"></i> Consiglio strategico
+                                    </h4>
+                                    <p class="store-ai-section__advice" id="store-ai-consiglio"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- stato: errore -->
+                        <div class="store-ai-panel__error" id="store-ai-error" hidden>
+                            <i data-lucide="wifi-off"></i>
+                            <span id="store-ai-error-msg">Errore durante l'analisi.</span>
+                        </div>
+                    </div>
+
                     <div class="store-inventory">
 
                         <!-- ── Tabella prodotti ──────────────────────────── -->
@@ -415,9 +474,94 @@
             activateStoreTab(initial);
         }
 
+        // ── AI Stock Analysis — Fase 54 ───────────────────────────────────
+        function initStoreAI() {
+            var btn = document.getElementById('store-ai-btn');
+            if (!btn || btn.dataset.aiBound === '1') return;
+            btn.dataset.aiBound = '1';
+
+            btn.addEventListener('click', function () {
+                var storeId = btn.getAttribute('data-store-id');
+                runStockAnalysis(storeId);
+            });
+        }
+
+        function setAIState(state) {
+            var ids = ['store-ai-idle', 'store-ai-loading', 'store-ai-result', 'store-ai-error'];
+            ids.forEach(function (id) {
+                var el = document.getElementById(id);
+                if (el) el.hidden = true;
+            });
+            var target = document.getElementById('store-ai-' + state);
+            if (target) target.hidden = false;
+        }
+
+        function fillList(listId, items) {
+            var ul = document.getElementById(listId);
+            if (!ul) return;
+            ul.innerHTML = '';
+            (items || []).forEach(function (txt) {
+                var li = document.createElement('li');
+                li.textContent = txt;
+                ul.appendChild(li);
+            });
+        }
+
+        function runStockAnalysis(storeId) {
+            var btn = document.getElementById('store-ai-btn');
+            if (btn) btn.disabled = true;
+            setAIState('loading');
+
+            fetch('/store/' + storeId + '/analyze_stock', {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            })
+            .then(function (res) { return res.json().then(function (d) { return { ok: res.ok, data: d }; }); })
+            .then(function (r) {
+                if (!r.ok) {
+                    var errEl = document.getElementById('store-ai-error-msg');
+                    if (errEl) errEl.textContent = r.data.error || 'Errore durante l\'analisi.';
+                    setAIState('error');
+                    return;
+                }
+                var d = r.data;
+
+                // Criticità grave
+                var critBox = document.getElementById('store-ai-critical');
+                var critMsg = document.getElementById('store-ai-critical-msg');
+                if (d.criticita_grave && d.criticita_messaggio) {
+                    if (critMsg) critMsg.textContent = '⚠ Criticità grave: ' + d.criticita_messaggio;
+                    if (critBox) critBox.hidden = false;
+                } else {
+                    if (critBox) critBox.hidden = true;
+                }
+
+                fillList('store-ai-esaurimento', d.esaurimento);
+                fillList('store-ai-scadenza', d.scadenza);
+
+                var consiglio = document.getElementById('store-ai-consiglio');
+                if (consiglio) consiglio.textContent = d.consiglio || '';
+
+                setAIState('result');
+
+                // Reinit Lucide per le icone appena rese visibili
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            })
+            .catch(function () {
+                var errEl = document.getElementById('store-ai-error-msg');
+                if (errEl) errEl.textContent = 'Errore di rete. Controlla la connessione.';
+                setAIState('error');
+            })
+            .finally(function () {
+                var btn = document.getElementById('store-ai-btn');
+                if (btn) btn.disabled = false;
+            });
+        }
+
         function bootStoreDashboard() {
             initStoreDashboardIcons();
             initStoreDashboardTabs();
+            initStoreAI();
         }
 
         document.addEventListener('turbo:load', bootStoreDashboard);

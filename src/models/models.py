@@ -62,6 +62,19 @@ class InventoryItem(db.Model):
     store = db.relationship('Store', backref=db.backref('inventory_items', lazy='dynamic'))
 
 
+class StockAlert(db.Model):
+    """Criticità AI rilevata sull'inventario di una sede — esposta alla dashboard globale."""
+    __tablename__ = 'stock_alert'
+    id         = db.Column(db.Integer, primary_key=True)
+    store_id   = db.Column(db.Integer, db.ForeignKey('store.id'), nullable=False, index=True)
+    severity   = db.Column(db.String(20), nullable=False, default='warning')  # 'critical' | 'warning'
+    message    = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    resolved   = db.Column(db.Boolean, default=False, nullable=False)
+
+    store = db.relationship('Store', backref=db.backref('stock_alerts', lazy='dynamic'))
+
+
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=False)
