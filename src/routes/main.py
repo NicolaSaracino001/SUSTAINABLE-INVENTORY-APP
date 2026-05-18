@@ -274,12 +274,14 @@ def store_dashboard(store_id):
     if active_tab not in STORE_PANEL_ENABLED:
         flash("ℹ️ Questa sezione sarà disponibile a breve.")
         active_tab = 'panoramica'
+    staff = User.query.filter_by(store_id=store_id).all()
     return render_template(
         'store_dashboard.html',
         store=store,
         store_tabs=STORE_PANEL_TABS,
         enabled_tabs=STORE_PANEL_ENABLED,
         active_tab=active_tab,
+        staff=staff,
     )
 
 
@@ -330,6 +332,55 @@ def store_delete(store_id):
     db.session.commit()
     flash(f"✅ Sede «{store_name}» eliminata.")
     return redirect(url_for('main.dashboard'))
+
+
+@main.route('/store/<int:store_id>/add_staff', methods=['POST'])
+@login_required
+@owner_required
+def store_add_staff(store_id):
+    """Aggiunge un nuovo dipendente alla sede specificata."""
+    store = Store.query.get_or_404(store_id)
+    if not _user_can_access_store(store):
+        flash("❌ Accesso negato: questa sede non ti appartiene.")
+        return redirect(url_for('main.dashboard'))
+
+    full_name = (request.form.get('full_name') or '').strip()
+    email = (request.form.get('email') or '').strip().lower()
+    password = request.form.get('password') or ''
+    role = (request.form.get('role') or 'staff').strip()
+
+    allowed_roles = {'staff', 'manager', 'chef'}
+    if role not in allowed_roles:
+        role = 'staff'
+
+    if not full_name:
+        flash("❌ Inserisci il nome del dipendente.")
+        return redirect(url_for('main.store_dashboard', store_id=store_id, tab='team'))
+    if not email:
+        flash("❌ Inserisci l'email del dipendente.")
+        return redirect(url_for('main.store_dashboard', store_id=store_id, tab='team'))
+    if len(password) < 6:
+        flash("❌ La password deve essere di almeno 6 caratteri.")
+        return redirect(url_for('main.store_dashboard', store_id=store_id, tab='team'))
+
+    if User.query.filter_by(email=email).first():
+        flash(f"❌ Esiste già un account con l'email {email}.")
+        return redirect(url_for('main.store_dashboard', store_id=store_id, tab='team'))
+
+    new_user = User(
+        email=email,
+        full_name=full_name,
+        restaurant_name=store.name,
+        role=role,
+        parent_id=current_user.id,
+        store_id=store_id,
+    )
+    new_user.set_password(password)
+    db.session.add(new_user)
+    db.session.commit()
+
+    flash(f"✅ Dipendente «{full_name}» aggiunto con successo al team.")
+    return redirect(url_for('main.store_dashboard', store_id=store_id, tab='team'))
 
 
 def calculate_estimated_needs(rest_id):

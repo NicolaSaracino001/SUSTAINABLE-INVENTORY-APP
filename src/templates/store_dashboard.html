@@ -78,7 +78,112 @@
                      data-tab="team"
                      hidden>
                 <div class="store-tab-panel__inner">
-                    <p class="store-tab-panel__placeholder">Team — in arrivo.</p>
+                    <div class="store-team">
+
+                        <!-- ── Lista dipendenti ──────────────────────────── -->
+                        <div class="store-team__list-col">
+                            <h3 class="store-team__col-title">
+                                <i data-lucide="users"></i> Dipendenti della sede
+                            </h3>
+
+                            {% if staff %}
+                            <div class="store-team__table-wrap">
+                                <table class="store-team__table">
+                                    <thead>
+                                        <tr>
+                                            <th>Nome</th>
+                                            <th>Email</th>
+                                            <th>Ruolo</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for member in staff %}
+                                        <tr>
+                                            <td>
+                                                <span class="store-team__avatar">
+                                                    {{ member.full_name[0]|upper }}
+                                                </span>
+                                                {{ member.full_name }}
+                                            </td>
+                                            <td class="store-team__email">{{ member.email }}</td>
+                                            <td>
+                                                <span class="store-team__badge store-team__badge--{{ member.role }}">
+                                                    {{ member.role|capitalize }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="store-team__empty">
+                                <i data-lucide="user-x"></i>
+                                <p>Nessun dipendente assegnato a questa sede.</p>
+                                <p class="store-team__empty-hint">Usa il form a destra per aggiungerne uno.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- ── Form aggiungi dipendente ──────────────────── -->
+                        <div class="store-team__form-col">
+                            <h3 class="store-team__col-title">
+                                <i data-lucide="user-plus"></i> Aggiungi Dipendente
+                            </h3>
+
+                            <form method="post"
+                                  action="{{ url_for('main.store_add_staff', store_id=store.id) }}"
+                                  class="store-team__form">
+
+                                <div class="form-group">
+                                    <label class="form-label" for="staff-name">Nome completo</label>
+                                    <input type="text"
+                                           id="staff-name"
+                                           name="full_name"
+                                           required
+                                           maxlength="255"
+                                           placeholder="es. Mario Rossi"
+                                           autocomplete="name">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label" for="staff-email">Email</label>
+                                    <input type="email"
+                                           id="staff-email"
+                                           name="email"
+                                           required
+                                           maxlength="255"
+                                           placeholder="es. mario@locale.it"
+                                           autocomplete="email">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label" for="staff-password">Password</label>
+                                    <input type="password"
+                                           id="staff-password"
+                                           name="password"
+                                           required
+                                           minlength="6"
+                                           placeholder="Minimo 6 caratteri"
+                                           autocomplete="new-password">
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label" for="staff-role">Ruolo</label>
+                                    <select id="staff-role" name="role" class="store-team__select">
+                                        <option value="staff">Staff</option>
+                                        <option value="manager">Manager</option>
+                                        <option value="chef">Chef</option>
+                                    </select>
+                                </div>
+
+                                <button type="submit" class="btn btn-amber store-team__submit">
+                                    <i data-lucide="user-plus"></i> Aggiungi al Team
+                                </button>
+                            </form>
+                        </div>
+
+                    </div>
                 </div>
             </section>
 
