@@ -48,6 +48,20 @@ class Store(db.Model):
     owner_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
 
 
+class InventoryItem(db.Model):
+    """Prodotto in giacenza per una singola sede (multi-sede)."""
+    __tablename__ = 'inventory_item'
+    id          = db.Column(db.Integer, primary_key=True)
+    name        = db.Column(db.String(255), nullable=False)
+    quantity    = db.Column(db.Float, nullable=False, default=0.0)
+    unit        = db.Column(db.String(50), nullable=False, default='pz')
+    expiry_date = db.Column(db.Date, nullable=True)
+    store_id    = db.Column(db.Integer, db.ForeignKey('store.id'), nullable=False, index=True)
+    created_at  = db.Column(db.DateTime, default=datetime.utcnow)
+
+    store = db.relationship('Store', backref=db.backref('inventory_items', lazy='dynamic'))
+
+
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=False)
