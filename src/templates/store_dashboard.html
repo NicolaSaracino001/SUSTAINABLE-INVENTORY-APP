@@ -67,7 +67,129 @@
                      data-tab="magazzino"
                      hidden>
                 <div class="store-tab-panel__inner">
-                    <p class="store-tab-panel__placeholder">Magazzino — in arrivo.</p>
+                    <div class="store-inventory">
+
+                        <!-- ── Tabella prodotti ──────────────────────────── -->
+                        <div class="store-inventory__list-col">
+                            <h3 class="store-inventory__col-title">
+                                <i data-lucide="package"></i> Prodotti in giacenza
+                            </h3>
+
+                            {% if inventory %}
+                            <div class="store-inventory__table-wrap">
+                                <table class="store-inventory__table">
+                                    <thead>
+                                        <tr>
+                                            <th>Prodotto</th>
+                                            <th>Quantità</th>
+                                            <th>Unità</th>
+                                            <th>Scadenza</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in inventory %}
+                                        {% set is_expired   = item.expiry_date and item.expiry_date < now_date %}
+                                        {% set is_expiring  = item.expiry_date and not is_expired and (item.expiry_date - now_date).days <= 3 %}
+                                        <tr class="{% if is_expired %}store-inventory__row--expired{% elif is_expiring %}store-inventory__row--expiring{% endif %}">
+                                            <td class="store-inventory__name">
+                                                <span class="store-inventory__icon">
+                                                    <i data-lucide="box"></i>
+                                                </span>
+                                                {{ item.name }}
+                                            </td>
+                                            <td class="store-inventory__qty">{{ item.quantity|int if item.quantity == item.quantity|int else item.quantity }}</td>
+                                            <td>
+                                                <span class="store-inventory__unit">{{ item.unit }}</span>
+                                            </td>
+                                            <td>
+                                                {% if item.expiry_date %}
+                                                    <span class="store-inventory__expiry{% if is_expired %} store-inventory__expiry--expired{% elif is_expiring %} store-inventory__expiry--soon{% endif %}">
+                                                        {% if is_expired %}
+                                                            <i data-lucide="alert-circle"></i>
+                                                        {% elif is_expiring %}
+                                                            <i data-lucide="alert-triangle"></i>
+                                                        {% else %}
+                                                            <i data-lucide="calendar"></i>
+                                                        {% endif %}
+                                                        {{ item.expiry_date.strftime('%d/%m/%Y') }}
+                                                    </span>
+                                                {% else %}
+                                                    <span class="store-inventory__no-expiry">—</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="store-inventory__empty">
+                                <i data-lucide="package-open"></i>
+                                <p>Nessun prodotto in magazzino per questa sede.</p>
+                                <p class="store-inventory__empty-hint">Usa il form a destra per aggiungerne uno.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- ── Form aggiungi prodotto ────────────────────── -->
+                        <div class="store-inventory__form-col">
+                            <h3 class="store-inventory__col-title">
+                                <i data-lucide="plus-circle"></i> Aggiungi Prodotto
+                            </h3>
+
+                            <form method="post"
+                                  action="{{ url_for('main.store_add_product', store_id=store.id) }}"
+                                  class="store-inventory__form">
+
+                                <div class="form-group">
+                                    <label class="form-label" for="inv-name">Nome prodotto</label>
+                                    <input type="text"
+                                           id="inv-name"
+                                           name="name"
+                                           required
+                                           maxlength="255"
+                                           placeholder="es. Farina 00">
+                                </div>
+
+                                <div class="store-inventory__form-row">
+                                    <div class="form-group">
+                                        <label class="form-label" for="inv-qty">Quantità</label>
+                                        <input type="number"
+                                               id="inv-qty"
+                                               name="quantity"
+                                               required
+                                               min="0"
+                                               step="0.01"
+                                               placeholder="0">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label" for="inv-unit">Unità</label>
+                                        <select id="inv-unit" name="unit" class="store-inventory__select">
+                                            <option value="kg">kg</option>
+                                            <option value="g">g</option>
+                                            <option value="l">l</option>
+                                            <option value="ml">ml</option>
+                                            <option value="pz" selected>pz</option>
+                                            <option value="conf">conf</option>
+                                            <option value="btg">btg</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label class="form-label" for="inv-expiry">Scadenza <span class="store-inventory__optional">(opzionale)</span></label>
+                                    <input type="date"
+                                           id="inv-expiry"
+                                           name="expiry_date">
+                                </div>
+
+                                <button type="submit" class="btn btn-amber store-inventory__submit">
+                                    <i data-lucide="plus"></i> Aggiungi al Magazzino
+                                </button>
+                            </form>
+                        </div>
+
+                    </div>
                 </div>
             </section>
 

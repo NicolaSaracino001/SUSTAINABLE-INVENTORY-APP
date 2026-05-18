@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, send_file, send_from_directory, current_app, session, jsonify
 from flask_login import login_required, current_user
-from src.models.models import MenuItem, RecipeItem, Product, ConsumptionLog, User, Supplier, WasteLog, SaleLog, DailyGuests, Store, db
+from src.models.models import MenuItem, RecipeItem, Product, ConsumptionLog, User, Supplier, WasteLog, SaleLog, DailyGuests, Store, InventoryItem, db
 from src.utils.mailer import send_welcome_premium_email
 from datetime import datetime, timedelta
 from functools import wraps
@@ -274,7 +274,9 @@ def store_dashboard(store_id):
     if active_tab not in STORE_PANEL_ENABLED:
         flash("ℹ️ Questa sezione sarà disponibile a breve.")
         active_tab = 'panoramica'
+    from datetime import date as _date
     staff = User.query.filter_by(store_id=store_id).all()
+    inventory = InventoryItem.query.filter_by(store_id=store_id).order_by(InventoryItem.name).all()
     return render_template(
         'store_dashboard.html',
         store=store,
@@ -282,6 +284,8 @@ def store_dashboard(store_id):
         enabled_tabs=STORE_PANEL_ENABLED,
         active_tab=active_tab,
         staff=staff,
+        inventory=inventory,
+        now_date=_date.today(),
     )
 
 
@@ -381,6 +385,55 @@ def store_add_staff(store_id):
 
     flash(f"✅ Dipendente «{full_name}» aggiunto con successo al team.")
     return redirect(url_for('main.store_dashboard', store_id=store_id, tab='team'))
+
+
+@main.route('/store/<int:store_id>/add_product', methods=['POST'])
+@login_required
+@owner_required
+def store_add_product(store_id):
+    """Aggiunge un prodotto al magazzino della sede specificata."""
+    from datetime import date as _date
+    store = Store.query.get_or_404(store_id)
+    if not _user_can_access_store(store):
+        flash("❌ Accesso negato: questa sede non ti appartiene.")
+        return redirect(url_for('main.dashboard'))
+
+    name = (request.form.get('name') or '').strip()
+    unit = (request.form.get('unit') or 'pz').strip()
+    expiry_raw = (request.form.get('expiry_date') or '').strip()
+
+    try:
+        quantity = float(request.form.get('quantity') or 0)
+    except ValueError:
+        quantity = 0.0
+
+    if not name:
+        flash("❌ Inserisci il nome del prodotto.")
+        return redirect(url_for('main.store_dashboard', store_id=store_id, tab='magazzino'))
+    if quantity < 0:
+        flash("❌ La quantità non può essere negativa.")
+        return redirect(url_for('main.store_dashboard', store_id=store_id, tab='magazzino'))
+
+    expiry_date = None
+    if expiry_raw:
+        try:
+            expiry_date = _date.fromisoformat(expiry_raw)
+        except ValueError:
+            flash("❌ Formato data scadenza non valido (usa AAAA-MM-GG).")
+            return redirect(url_for('main.store_dashboard', store_id=store_id, tab='magazzino'))
+
+    item = InventoryItem(
+        name=name,
+        quantity=quantity,
+        unit=unit,
+        expiry_date=expiry_date,
+        store_id=store_id,
+    )
+    db.session.add(item)
+    db.session.commit()
+
+    flash(f"✅ Prodotto «{name}» aggiunto al magazzino.")
+    return redirect(url_for('main.store_dashboard', store_id=store_id, tab='magazzino'))
 
 
 def calculate_estimated_needs(rest_id):
