@@ -19,7 +19,8 @@ class User(UserMixin, db.Model):
     profile_image = db.Column(db.String(500), default='default')
     stripe_customer_id = db.Column(db.String(255), nullable=True)
     subscription_status = db.Column(db.String(50), default='trial')
-    stores = db.relationship('Store', backref='owner', lazy=True)
+    store_id = db.Column(db.Integer, db.ForeignKey('store.id'), nullable=True)
+    stores = db.relationship('Store', backref='owner', lazy=True, foreign_keys='[Store.owner_id]')
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

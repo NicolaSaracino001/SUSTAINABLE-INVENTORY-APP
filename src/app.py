@@ -223,6 +223,25 @@ def create_app(config_name: str = None) -> Flask:
             except Exception as _mig_err:
                 logger.warning(f'  Migration : subscription_status già presente o errore ignorato: {_mig_err}')
 
+        # Fase 52 — store_id su user (dipendenti assegnati a una sede)
+        user_cols_names_52 = [c['name'] for c in inspector.get_columns('user')]
+        if 'store_id' not in user_cols_names_52:
+            try:
+                with db.engine.connect() as conn:
+                    dialect = db.engine.dialect.name
+                    if dialect == 'postgresql':
+                        conn.execute(text(
+                            'ALTER TABLE "user" ADD COLUMN store_id INTEGER REFERENCES store(id)'
+                        ))
+                    else:
+                        conn.execute(text(
+                            'ALTER TABLE user ADD COLUMN store_id INTEGER REFERENCES store(id)'
+                        ))
+                    conn.commit()
+                logger.info('  Migration : user.store_id aggiunta ✓')
+            except Exception as _mig_err:
+                logger.warning(f'  Migration : store_id già presente o errore ignorato: {_mig_err}')
+
         logger.info('━' * 58)
 
     # ── Gestori errori personalizzati ──────────────────────────────────────
